@@ -13,7 +13,8 @@ const emptyPortfolio: CreatePortfolioPayload = {
   type: "Pea",
   broker: "",
   baseCurrency: "EUR",
-  cashBalance: 0
+  cashBalance: 0,
+  targetWeight: 0
 };
 
 export function PortfoliosPage() {
@@ -41,7 +42,8 @@ export function PortfoliosPage() {
       type: portfolio.type,
       broker: portfolio.broker,
       baseCurrency: portfolio.baseCurrency,
-      cashBalance: portfolio.cashBalance
+      cashBalance: portfolio.cashBalance,
+      targetWeight: portfolio.targetWeight
     });
   }
 
@@ -56,6 +58,7 @@ export function PortfoliosPage() {
             <label>Courtier<input value={form.broker} onChange={(event) => setForm({ ...form, broker: event.target.value })} required /></label>
             <label>Devise<input value={form.baseCurrency} onChange={(event) => setForm({ ...form, baseCurrency: event.target.value })} required maxLength={3} /></label>
             <label>Cash<input type="number" step="0.01" value={form.cashBalance} onChange={(event) => setForm({ ...form, cashBalance: Number(event.target.value) })} /></label>
+            <label>Cle globale<input type="number" step="0.01" min={0} max={1} value={form.targetWeight} onChange={(event) => setForm({ ...form, targetWeight: Number(event.target.value) })} /></label>
             <div className="formActions">
               <button type="submit">{editingId ? "Enregistrer" : "Creer"}</button>
               {editingId ? <button className="secondaryButton" type="button" onClick={() => { setEditingId(null); setForm(emptyPortfolio); }}>Annuler</button> : null}
@@ -70,7 +73,7 @@ export function PortfoliosPage() {
                 <button className="entityRow" key={portfolio.id} onClick={() => edit(portfolio)} type="button">
                   <div>
                     <strong>{portfolio.name}</strong>
-                    <span>{portfolio.broker} - {portfolio.type}</span>
+                    <span>{portfolio.broker} - {portfolio.type} - cle {Math.round(portfolio.targetWeight * 100)}%</span>
                   </div>
                   <span>{formatCurrency(portfolio.cashBalance)}</span>
                 </button>

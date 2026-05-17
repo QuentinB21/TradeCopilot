@@ -9,12 +9,12 @@ Le PDF `Outil_de_suivi_dinvestissements.pdf` est la source de verite. Le MVP cou
 - transactions manuelles ;
 - recalcul des positions depuis les transactions ;
 - dashboard global ;
-- assistant mensuel 80% PEA / 20% Trade Republic ;
+- assistant mensuel pilote par les cles de repartition configurees ;
 - preparation PostgreSQL et rapports.
 
 ## Modules de code
 
-- `Domain` : objets metier stables, sans dependance technique. Les entites et enums sont decoupes par domaine (`Portfolios`, `Assets`, `Transactions`, `Prices`, `Allocation`, `Reporting`, `Journal`).
+- `Domain` : objets metier stables, sans dependance technique. Les entites et enums sont decoupes par domaine (`Portfolios`, `Assets`, `Transactions`, `Prices`, `Allocation`, `Strategy`, `Reporting`, `Journal`).
 - `Application` : contrats DTO, interfaces de services, cas d'usage, calculs purs et recommandations.
 - `Infrastructure` : implementation EF Core des repositories, seed initial Quentin, initialisation DB.
 - `Api` : controllers REST par ressource, configuration du pipeline et composition racine.
@@ -34,6 +34,8 @@ Exemples actuels :
 - `AssetsController` -> `IAssetService` -> `IInvestmentRepository`.
 - `TransactionsController` -> `ITransactionService` -> `IInvestmentRepository`.
 - `PricesController` -> `IPriceService` -> `IInvestmentRepository`.
+- `AllocationRulesController` -> `IAllocationRuleService` -> `IInvestmentRepository`.
+- `StrategyRulesController` -> `IStrategyRuleService` -> `IInvestmentRepository`.
 - `DashboardController` -> `IDashboardQueryService` -> calculs applicatifs + repository.
 - `MonthlyPlanController` -> `IInvestmentPlanService` -> calculs applicatifs + repository.
 
@@ -61,7 +63,7 @@ Le client React ne presente plus de menu factice. Les vues disponibles correspon
 - Transactions : saisie append-only et historique.
 - Prix : saisie manuelle des cours et historique.
 - Assistant : generation du plan mensuel.
-- Strategie : lecture des regles configurees.
+- Strategie : configuration des portefeuilles, actifs, cles de repartition globales, cles par ligne et regles de decision.
 
 ## Decisions initiales
 
@@ -69,7 +71,8 @@ Le client React ne presente plus de menu factice. Les vues disponibles correspon
 2. Les gains realises utilisent le prix moyen d'achat au moment de la vente.
 3. Les lignes `Observation`, `Frozen` et `PlannedExit` ne sont pas renforcees par l'assistant mensuel.
 4. Les operations d'investissement restent consultatives : aucune execution reelle n'est declenchee.
-5. Les parametres propres a Quentin sont seedes comme donnees, pas codes en dur dans les calculs.
+5. Les parametres propres a Quentin sont seedes comme donnees d'exemple configurables, pas codes en dur dans les calculs.
+6. Les suppressions de portefeuilles et d'actifs references sont bloquees avec un `409 Conflict` pour eviter les cascades destructrices.
 
 ## Increments suivants
 

@@ -4,5 +4,5 @@ namespace TradeCopilot.Application.Services.Strategy;
 
 public interface IStrategyService
 {
-    StrategyDto GetStrategy();
+    Task<StrategyDto> GetStrategyAsync(CancellationToken cancellationToken = default);
 }

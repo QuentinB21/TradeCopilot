@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using TradeCopilot.Application.Contracts.Assets;
+using TradeCopilot.Application.Contracts.Common;
 using TradeCopilot.Application.Services.Assets;
 
 namespace TradeCopilot.Api.Controllers;
@@ -39,7 +40,13 @@ public sealed class AssetsController(IAssetService assetService) : ControllerBas
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteAsset(Guid id, CancellationToken cancellationToken)
     {
-        var deleted = await assetService.DeleteAssetAsync(id, cancellationToken);
-        return deleted ? NoContent() : NotFound();
+        var result = await assetService.DeleteAssetAsync(id, cancellationToken);
+        return result switch
+        {
+            DeleteEntityResult.Deleted => NoContent(),
+            DeleteEntityResult.NotFound => NotFound(),
+            DeleteEntityResult.Conflict => Conflict("Cet actif est reference par des transactions, des prix ou des regles. Supprimez d'abord ces dependances."),
+            _ => Problem()
+        };
     }
 }

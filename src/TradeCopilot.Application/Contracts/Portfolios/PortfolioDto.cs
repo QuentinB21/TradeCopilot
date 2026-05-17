@@ -8,4 +8,5 @@ public sealed record PortfolioDto(
     PortfolioType Type,
     string Broker,
     string BaseCurrency,
-    decimal CashBalance);
+    decimal CashBalance,
+    decimal TargetWeight);

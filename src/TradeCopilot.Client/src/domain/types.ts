@@ -10,6 +10,7 @@ export type Portfolio = {
   broker: string;
   baseCurrency: string;
   cashBalance: number;
+  targetWeight: number;
 };
 
 export type Asset = {
@@ -105,13 +106,39 @@ export type MonthlyInvestmentPlan = {
   notes: string[];
 };
 
+export type AllocationRuleStatus = "Active" | "Frozen" | "ExitOnly";
+
+export type AllocationRule = {
+  id: string;
+  portfolioId: string;
+  assetId: string;
+  targetWeight: number;
+  minWeight: number | null;
+  maxWeight: number | null;
+  status: AllocationRuleStatus;
+};
+
+export type StrategyRule = {
+  id: string;
+  portfolioId: string | null;
+  assetId: string | null;
+  name: string;
+  description: string;
+  triggerCondition: string | null;
+  recommendedAction: string;
+  priority: number;
+  isActive: boolean;
+};
+
 export type Strategy = {
   globalAllocation: { envelope: string; targetWeight: number }[];
-  peaRules: string[];
-  tradeRepublicRules: string[];
+  rules: StrategyRule[];
 };
 
 export type CreatePortfolioPayload = Omit<Portfolio, "id">;
 export type CreateAssetPayload = Omit<Asset, "id"> & { country: string | null; priceProvider: string | null };
 export type CreateTransactionPayload = Omit<Transaction, "id">;
 export type CreateAssetPricePayload = Omit<AssetPrice, "id">;
+export type CreateAllocationRulePayload = Omit<AllocationRule, "id">;
+export type UpdateAllocationRulePayload = Omit<AllocationRule, "id" | "portfolioId" | "assetId">;
+export type CreateStrategyRulePayload = Omit<StrategyRule, "id">;

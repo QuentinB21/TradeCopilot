@@ -199,6 +199,13 @@ h2 {
   gap: 16px;
 }
 
+.configurationGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(360px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
 .panel {
   padding: 18px;
 }
@@ -319,6 +326,14 @@ h2 {
   flex-wrap: wrap;
 }
 
+.rowActions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
 .compactList {
   display: grid;
   gap: 10px;
@@ -412,6 +427,10 @@ td span {
   font-weight: 750;
 }
 
+.dangerText {
+  color: #b23b3b;
+}
+
 .status {
   display: inline-grid;
   place-items: center;
@@ -456,7 +475,8 @@ td span {
   }
 
   .metrics,
-  .grid {
+  .grid,
+  .configurationGrid {
     grid-template-columns: 1fr;
   }
 

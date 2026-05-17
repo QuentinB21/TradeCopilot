@@ -8,6 +8,7 @@ public sealed class Portfolio
     public required string Broker { get; set; }
     public required string BaseCurrency { get; set; }
     public decimal CashBalance { get; set; }
+    public decimal TargetWeight { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public List<Transaction> Transactions { get; set; } = [];
     public List<AllocationRule> AllocationRules { get; set; } = [];

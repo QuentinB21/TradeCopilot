@@ -11,7 +11,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
 app.UseCors("local-client");
 app.MapControllers();
 

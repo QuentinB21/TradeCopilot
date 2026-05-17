@@ -1,5 +1,6 @@
 using TradeCopilot.Application.Abstractions;
 using TradeCopilot.Application.Contracts.Assets;
+using TradeCopilot.Application.Contracts.Common;
 using TradeCopilot.Domain;
 
 namespace TradeCopilot.Application.Services.Assets;
@@ -70,16 +71,21 @@ public sealed class AssetService(IInvestmentRepository repository) : IAssetServi
         return ToDto(asset);
     }
 
-    public async Task<bool> DeleteAssetAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<DeleteEntityResult> DeleteAssetAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var asset = await repository.GetAssetByIdAsync(id, cancellationToken);
         if (asset is null)
         {
-            return false;
+            return DeleteEntityResult.NotFound;
+        }
+
+        if (await repository.AssetHasReferencesAsync(id, cancellationToken))
+        {
+            return DeleteEntityResult.Conflict;
         }
 
         await repository.DeleteAssetAsync(asset, cancellationToken);
-        return true;
+        return DeleteEntityResult.Deleted;
     }
 
     private static AssetDto ToDto(Asset asset) => new(

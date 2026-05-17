@@ -1,4 +1,5 @@
 using TradeCopilot.Application.Abstractions;
+using TradeCopilot.Application.Contracts.Common;
 using TradeCopilot.Application.Contracts.Portfolios;
 using TradeCopilot.Domain;
 
@@ -33,7 +34,8 @@ public sealed class PortfolioService(IInvestmentRepository repository) : IPortfo
             Type = request.Type,
             Broker = request.Broker.Trim(),
             BaseCurrency = request.BaseCurrency.Trim().ToUpperInvariant(),
-            CashBalance = request.CashBalance
+            CashBalance = request.CashBalance,
+            TargetWeight = request.TargetWeight
         };
 
         await repository.AddPortfolioAsync(portfolio, cancellationToken);
@@ -57,21 +59,27 @@ public sealed class PortfolioService(IInvestmentRepository repository) : IPortfo
         portfolio.Broker = request.Broker.Trim();
         portfolio.BaseCurrency = request.BaseCurrency.Trim().ToUpperInvariant();
         portfolio.CashBalance = request.CashBalance;
+        portfolio.TargetWeight = request.TargetWeight;
 
         await repository.UpdatePortfolioAsync(portfolio, cancellationToken);
         return ToDto(portfolio);
     }
 
-    public async Task<bool> DeletePortfolioAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<DeleteEntityResult> DeletePortfolioAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var portfolio = await repository.GetPortfolioByIdAsync(id, cancellationToken);
         if (portfolio is null)
         {
-            return false;
+            return DeleteEntityResult.NotFound;
+        }
+
+        if (await repository.PortfolioHasReferencesAsync(id, cancellationToken))
+        {
+            return DeleteEntityResult.Conflict;
         }
 
         await repository.DeletePortfolioAsync(portfolio, cancellationToken);
-        return true;
+        return DeleteEntityResult.Deleted;
     }
 
     private static PortfolioDto ToDto(Portfolio portfolio) => new(
@@ -80,5 +88,6 @@ public sealed class PortfolioService(IInvestmentRepository repository) : IPortfo
         portfolio.Type,
         portfolio.Broker,
         portfolio.BaseCurrency,
-        portfolio.CashBalance);
+        portfolio.CashBalance,
+        portfolio.TargetWeight);
 }

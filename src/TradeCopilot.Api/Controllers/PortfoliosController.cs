@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using TradeCopilot.Application.Contracts.Common;
 using TradeCopilot.Application.Contracts.Portfolios;
 using TradeCopilot.Application.Services.Portfolios;
 
@@ -39,7 +40,13 @@ public sealed class PortfoliosController(IPortfolioService portfolioService) : C
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeletePortfolio(Guid id, CancellationToken cancellationToken)
     {
-        var deleted = await portfolioService.DeletePortfolioAsync(id, cancellationToken);
-        return deleted ? NoContent() : NotFound();
+        var result = await portfolioService.DeletePortfolioAsync(id, cancellationToken);
+        return result switch
+        {
+            DeleteEntityResult.Deleted => NoContent(),
+            DeleteEntityResult.NotFound => NotFound(),
+            DeleteEntityResult.Conflict => Conflict("Ce portefeuille est reference par des transactions ou des regles. Supprimez d'abord ces dependances."),
+            _ => Problem()
+        };
     }
 }

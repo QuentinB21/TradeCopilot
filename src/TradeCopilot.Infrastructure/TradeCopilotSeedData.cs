@@ -13,7 +13,8 @@ public static class TradeCopilotSeedData
             Type = PortfolioType.Pea,
             Broker = "BoursoBank",
             BaseCurrency = "EUR",
-            CashBalance = 0m
+            CashBalance = 0m,
+            TargetWeight = 0.80m
         };
 
         var tradeRepublic = new Portfolio
@@ -23,7 +24,8 @@ public static class TradeCopilotSeedData
             Type = PortfolioType.SecuritiesAccount,
             Broker = "Trade Republic",
             BaseCurrency = "EUR",
-            CashBalance = 0m
+            CashBalance = 0m,
+            TargetWeight = 0.20m
         };
 
         var wpea = Asset(Guid.Parse("20000000-0000-0000-0000-000000000001"), "iShares MSCI World Swap PEA", "WPEA", "IE0002XZSHO1", AssetType.Etf, "Global", StrategicStatus.Core);
@@ -80,7 +82,15 @@ public static class TradeCopilotSeedData
             Rule(tradeRepublic.Id, oracle.Id, 0.00m, AllocationRuleStatus.Frozen)
         };
 
-        return new TradeCopilotSeed([pea, tradeRepublic], assets, transactions, prices, allocationRules);
+        var strategyRules = new[]
+        {
+            StrategyRule(pea.Id, wpea.Id, "Achat mensuel WPEA", "Acheter regulierement le socle long terme.", "Entre le 10 et le 15 du mois", "Renforcer WPEA selon la cle du portefeuille.", 10),
+            StrategyRule(pea.Id, wpea.Id, "Correction WPEA", "Renforcer en cas de correction importante si du cash est disponible.", "Baisse superieure a 10%", "Prioriser WPEA apres validation humaine.", 20),
+            StrategyRule(tradeRepublic.Id, palantir.Id, "Palantir en observation", "Conservation possible, mais pas de renfort tant que l'activite n'est pas suffisamment comprise.", null, "Ne pas renforcer.", 30),
+            StrategyRule(tradeRepublic.Id, spotify.Id, "Spotify sortie planifiee", "Ligne non strategique.", "Rebond significatif", "Preparer une sortie apres validation humaine.", 40)
+        };
+
+        return new TradeCopilotSeed([pea, tradeRepublic], assets, transactions, prices, allocationRules, strategyRules);
     }
 
     private static Asset Asset(Guid id, string name, string symbol, string? isin, AssetType type, string sector, StrategicStatus status) => new()
@@ -125,6 +135,18 @@ public static class TradeCopilotSeedData
         TargetWeight = targetWeight,
         Status = status
     };
+
+    private static StrategyRule StrategyRule(Guid? portfolioId, Guid? assetId, string name, string description, string? triggerCondition, string recommendedAction, int priority) => new()
+    {
+        PortfolioId = portfolioId,
+        AssetId = assetId,
+        Name = name,
+        Description = description,
+        TriggerCondition = triggerCondition,
+        RecommendedAction = recommendedAction,
+        Priority = priority,
+        IsActive = true
+    };
 }
 
 public sealed record TradeCopilotSeed(
@@ -132,4 +154,5 @@ public sealed record TradeCopilotSeed(
     IReadOnlyList<Asset> Assets,
     IReadOnlyList<Transaction> Transactions,
     IReadOnlyList<AssetPrice> Prices,
-    IReadOnlyList<AllocationRule> AllocationRules);
+    IReadOnlyList<AllocationRule> AllocationRules,
+    IReadOnlyList<StrategyRule> StrategyRules);

@@ -1,17 +1,22 @@
-import { getJson, postJson, putJson } from "./client";
+import { deleteJson, getJson, postJson, putJson } from "./client";
 import type {
   Asset,
   AssetPrice,
   CreateAssetPayload,
   CreateAssetPricePayload,
+  CreateAllocationRulePayload,
   CreatePortfolioPayload,
+  CreateStrategyRulePayload,
   CreateTransactionPayload,
   Dashboard,
   MonthlyInvestmentPlan,
   Portfolio,
   Position,
   Strategy,
-  Transaction
+  AllocationRule,
+  StrategyRule,
+  Transaction,
+  UpdateAllocationRulePayload
 } from "../domain/types";
 
 export const tradeCopilotApi = {
@@ -20,13 +25,23 @@ export const tradeCopilotApi = {
   getPortfolios: () => getJson<Portfolio[]>("/api/portfolios"),
   createPortfolio: (payload: CreatePortfolioPayload) => postJson<Portfolio>("/api/portfolios", payload),
   updatePortfolio: (id: string, payload: CreatePortfolioPayload) => putJson<Portfolio>(`/api/portfolios/${id}`, payload),
+  deletePortfolio: (id: string) => deleteJson(`/api/portfolios/${id}`),
   getAssets: () => getJson<Asset[]>("/api/assets"),
   createAsset: (payload: CreateAssetPayload) => postJson<Asset>("/api/assets", payload),
   updateAsset: (id: string, payload: CreateAssetPayload) => putJson<Asset>(`/api/assets/${id}`, payload),
+  deleteAsset: (id: string) => deleteJson(`/api/assets/${id}`),
   getTransactions: () => getJson<Transaction[]>("/api/transactions"),
   createTransaction: (payload: CreateTransactionPayload) => postJson<Transaction>("/api/transactions", payload),
   getPrices: () => getJson<AssetPrice[]>("/api/prices"),
   createPrice: (payload: CreateAssetPricePayload) => postJson<AssetPrice>("/api/prices", payload),
+  getAllocationRules: () => getJson<AllocationRule[]>("/api/allocation-rules"),
+  createAllocationRule: (payload: CreateAllocationRulePayload) => postJson<AllocationRule>("/api/allocation-rules", payload),
+  updateAllocationRule: (id: string, payload: UpdateAllocationRulePayload) => putJson<AllocationRule>(`/api/allocation-rules/${id}`, payload),
+  deleteAllocationRule: (id: string) => deleteJson(`/api/allocation-rules/${id}`),
   createMonthlyPlan: (amount: number) => postJson<MonthlyInvestmentPlan>("/api/monthly-plan", { amount }),
-  getStrategy: () => getJson<Strategy>("/api/strategy")
+  getStrategy: () => getJson<Strategy>("/api/strategy"),
+  getStrategyRules: () => getJson<StrategyRule[]>("/api/strategy-rules"),
+  createStrategyRule: (payload: CreateStrategyRulePayload) => postJson<StrategyRule>("/api/strategy-rules", payload),
+  updateStrategyRule: (id: string, payload: CreateStrategyRulePayload) => putJson<StrategyRule>(`/api/strategy-rules/${id}`, payload),
+  deleteStrategyRule: (id: string) => deleteJson(`/api/strategy-rules/${id}`)
 };

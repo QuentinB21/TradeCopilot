@@ -7,4 +7,5 @@ public sealed record UpdatePortfolioRequest(
     PortfolioType Type,
     string Broker,
     string BaseCurrency,
-    decimal CashBalance);
+    decimal CashBalance,
+    decimal TargetWeight);

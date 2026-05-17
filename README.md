@@ -6,7 +6,7 @@ Le cahier des charges source est le fichier `Outil_de_suivi_dinvestissements.pdf
 
 ## Stack
 
-- Backend : ASP.NET Core Web API, .NET 8, architecture Domain/Application/Infrastructure.
+- Backend : ASP.NET Core Web API, .NET 10, architecture Domain/Application/Infrastructure.
 - Data : PostgreSQL via Entity Framework Core, creation et seed automatiques au demarrage API.
 - Jobs cible : Hangfire ou Quartz.NET dans un increment suivant.
 - Frontend : React, TypeScript, Vite, TanStack Query.
@@ -73,11 +73,13 @@ Endpoints utiles :
 - `GET /api/positions`
 - `POST /api/monthly-plan` avec `{ "amount": 400 }`
 - `GET /api/strategy`
+- `GET|POST|DELETE /api/allocation-rules`
+- `GET|POST|DELETE /api/strategy-rules`
 - `POST /api/transactions`
 
 ## Commandes frontend hors Docker
 
-`npm` n'est pas disponible dans le PATH de l'environnement actuel, mais le client est pret pour un poste Node classique :
+Le client utilise Vite recent et demande Node `^20.19.0 || >=22.12.0`. Le chemin recommande reste Docker Compose, mais le mode local fonctionne avec un Node a jour :
 
 ```powershell
 cd src/TradeCopilot.Client

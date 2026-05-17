@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using TradeCopilot.Application.Services.Assets;
+using TradeCopilot.Application.Services.Allocation;
 using TradeCopilot.Application.Services.Dashboard;
 using TradeCopilot.Application.Services.InvestmentPlans;
 using TradeCopilot.Application.Services.Portfolios;
@@ -19,12 +20,14 @@ public static class DependencyInjection
         services.AddSingleton<MonthlyInvestmentPlanner>();
         services.AddScoped<IPortfolioService, PortfolioService>();
         services.AddScoped<IAssetService, AssetService>();
+        services.AddScoped<IAllocationRuleService, AllocationRuleService>();
         services.AddScoped<ITransactionService, TransactionService>();
         services.AddScoped<IPriceService, PriceService>();
         services.AddScoped<IPositionQueryService, PositionQueryService>();
         services.AddScoped<IDashboardQueryService, DashboardQueryService>();
         services.AddScoped<IInvestmentPlanService, InvestmentPlanService>();
         services.AddScoped<IStrategyService, StrategyService>();
+        services.AddScoped<IStrategyRuleService, StrategyRuleService>();
 
         return services;
     }

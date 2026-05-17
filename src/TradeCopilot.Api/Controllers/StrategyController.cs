@@ -9,8 +9,8 @@ namespace TradeCopilot.Api.Controllers;
 public sealed class StrategyController(IStrategyService strategyService) : ControllerBase
 {
     [HttpGet]
-    public ActionResult<StrategyDto> GetStrategy()
+    public async Task<ActionResult<StrategyDto>> GetStrategy(CancellationToken cancellationToken)
     {
-        return Ok(strategyService.GetStrategy());
+        return Ok(await strategyService.GetStrategyAsync(cancellationToken));
     }
 }
