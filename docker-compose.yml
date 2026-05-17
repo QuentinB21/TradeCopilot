@@ -1,0 +1,80 @@
+services:
+  traefik:
+    image: traefik:v3.2
+    container_name: tradecopilot-traefik
+    command:
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--providers.file.filename=/etc/traefik/dynamic.yml"
+      - "--providers.file.watch=true"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - ./infra/traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+    networks:
+      - tradecopilot
+    depends_on:
+      - api
+      - client
+
+  client:
+    build:
+      context: .
+      dockerfile: src/TradeCopilot.Client/Dockerfile
+    container_name: tradecopilot-client
+    networks:
+      - tradecopilot
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/health | grep ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: src/TradeCopilot.Api/Dockerfile
+    container_name: tradecopilot-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__TradeCopilot: Host=postgres;Port=5432;Database=tradecopilot;Username=tradecopilot;Password=tradecopilot_dev_password
+    networks:
+      - tradecopilot
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/api/dashboard >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: tradecopilot-postgres
+    environment:
+      POSTGRES_DB: tradecopilot
+      POSTGRES_USER: tradecopilot
+      POSTGRES_PASSWORD: tradecopilot_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - tradecopilot-postgres:/var/lib/postgresql/data
+    networks:
+      - tradecopilot
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tradecopilot -d tradecopilot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  tradecopilot-postgres:
+
+networks:
+  tradecopilot:
+    name: tradecopilot

@@ -1,0 +1,63 @@
+import { useMutation } from "@tanstack/react-query";
+import { BrainCircuit } from "lucide-react";
+import { useState } from "react";
+import { tradeCopilotApi } from "../api/tradeCopilotApi";
+import { formatCurrency, formatPercent } from "../lib/format";
+import { Metric } from "../components/Metric";
+import { PageHeader } from "../components/PageHeader";
+import { Panel } from "../components/Panel";
+
+export function AssistantPage() {
+  const [amount, setAmount] = useState(400);
+  const monthlyPlan = useMutation({ mutationFn: tradeCopilotApi.createMonthlyPlan });
+
+  return (
+    <>
+      <PageHeader
+        title="Assistant mensuel"
+        description="Recommandation consultative selon l'allocation cible et les statuts strategiques."
+        action={<button className="ghostButton" onClick={() => monthlyPlan.mutate(amount)} type="button"><BrainCircuit size={18} /> Calculer</button>}
+      />
+      <section className="grid">
+        <Panel title="Parametres">
+          <form className="form" onSubmit={(event) => { event.preventDefault(); monthlyPlan.mutate(amount); }}>
+            <label>Montant a investir<input type="number" min={0} step={50} value={amount} onChange={(event) => setAmount(Number(event.target.value))} /></label>
+            <button type="submit">Generer la recommandation</button>
+          </form>
+          {monthlyPlan.data ? (
+            <div className="metrics singleMetric">
+              <Metric title="Montant analyse" value={formatCurrency(monthlyPlan.data.amount)} icon={<BrainCircuit size={20} />} />
+            </div>
+          ) : null}
+        </Panel>
+
+        <Panel title="Plan propose">
+          {monthlyPlan.data ? (
+            <div className="plan">
+              {monthlyPlan.data.envelopes.map((envelope) => (
+                <div className="planEnvelope" key={envelope.portfolioId}>
+                  <div className="splitHeader"><strong>{envelope.portfolioName}</strong><span>{formatCurrency(envelope.amount)}</span></div>
+                  {envelope.lines.map((line) => (
+                    <div className="compactRow" key={line.assetId}>
+                      <div>
+                        <strong>{line.symbol}</strong>
+                        <span>{line.assetName}</span>
+                      </div>
+                      <div className="rightText">
+                        <strong>{formatCurrency(line.amount)}</strong>
+                        <span>Cible {formatPercent(line.targetWeight)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+              <ul className="notes">{monthlyPlan.data.notes.map((note) => <li key={note}>{note}</li>)}</ul>
+            </div>
+          ) : (
+            <p className="emptyState">Lance le calcul pour obtenir une proposition d'achat mensuelle. Aucune operation reelle n'est executee.</p>
+          )}
+        </Panel>
+      </section>
+    </>
+  );
+}

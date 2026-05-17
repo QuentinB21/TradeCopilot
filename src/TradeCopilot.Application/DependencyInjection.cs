@@ -1,0 +1,31 @@
+using Microsoft.Extensions.DependencyInjection;
+using TradeCopilot.Application.Services.Assets;
+using TradeCopilot.Application.Services.Dashboard;
+using TradeCopilot.Application.Services.InvestmentPlans;
+using TradeCopilot.Application.Services.Portfolios;
+using TradeCopilot.Application.Services.Positions;
+using TradeCopilot.Application.Services.Prices;
+using TradeCopilot.Application.Services.Strategy;
+using TradeCopilot.Application.Services.Transactions;
+
+namespace TradeCopilot.Application;
+
+public static class DependencyInjection
+{
+    public static IServiceCollection AddTradeCopilotApplication(this IServiceCollection services)
+    {
+        services.AddSingleton<PositionCalculator>();
+        services.AddSingleton<DashboardService>();
+        services.AddSingleton<MonthlyInvestmentPlanner>();
+        services.AddScoped<IPortfolioService, PortfolioService>();
+        services.AddScoped<IAssetService, AssetService>();
+        services.AddScoped<ITransactionService, TransactionService>();
+        services.AddScoped<IPriceService, PriceService>();
+        services.AddScoped<IPositionQueryService, PositionQueryService>();
+        services.AddScoped<IDashboardQueryService, DashboardQueryService>();
+        services.AddScoped<IInvestmentPlanService, InvestmentPlanService>();
+        services.AddScoped<IStrategyService, StrategyService>();
+
+        return services;
+    }
+}

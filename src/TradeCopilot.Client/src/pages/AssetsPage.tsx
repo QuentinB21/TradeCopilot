@@ -1,0 +1,98 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { tradeCopilotApi } from "../api/tradeCopilotApi";
+import { assetTypes, strategicStatuses } from "../domain/options";
+import type { Asset, CreateAssetPayload } from "../domain/types";
+import { PageHeader } from "../components/PageHeader";
+import { Panel } from "../components/Panel";
+import { QueryState } from "../components/QueryState";
+
+const emptyAsset: CreateAssetPayload = {
+  name: "",
+  symbol: "",
+  isin: null,
+  type: "Stock",
+  currency: "EUR",
+  sector: "",
+  country: "",
+  priceProvider: "manual",
+  strategicStatus: "Conviction"
+};
+
+export function AssetsPage() {
+  const queryClient = useQueryClient();
+  const assetsQuery = useQuery({ queryKey: ["assets"], queryFn: tradeCopilotApi.getAssets });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<CreateAssetPayload>(emptyAsset);
+
+  const saveAsset = useMutation({
+    mutationFn: () => editingId ? tradeCopilotApi.updateAsset(editingId, form) : tradeCopilotApi.createAsset(form),
+    onSuccess: async () => {
+      setEditingId(null);
+      setForm(emptyAsset);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["assets"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] })
+      ]);
+    }
+  });
+
+  function edit(asset: Asset) {
+    setEditingId(asset.id);
+    setForm({
+      name: asset.name,
+      symbol: asset.symbol,
+      isin: asset.isin,
+      type: asset.type,
+      currency: asset.currency,
+      sector: asset.sector,
+      country: "",
+      priceProvider: "manual",
+      strategicStatus: asset.strategicStatus
+    });
+  }
+
+  return (
+    <>
+      <PageHeader title="Actifs" description="Referentiel des ETF, actions et statuts strategiques." />
+      <section className="grid">
+        <Panel title={editingId ? "Modifier un actif" : "Nouvel actif"}>
+          <form className="form" onSubmit={(event) => { event.preventDefault(); saveAsset.mutate(); }}>
+            <label>Nom<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required /></label>
+            <label>Symbole<input value={form.symbol} onChange={(event) => setForm({ ...form, symbol: event.target.value })} required /></label>
+            <label>ISIN<input value={form.isin ?? ""} onChange={(event) => setForm({ ...form, isin: event.target.value || null })} /></label>
+            <label>Type<select value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value as CreateAssetPayload["type"] })}>{assetTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
+            <label>Devise<input value={form.currency} onChange={(event) => setForm({ ...form, currency: event.target.value })} required maxLength={3} /></label>
+            <label>Secteur<input value={form.sector ?? ""} onChange={(event) => setForm({ ...form, sector: event.target.value || null })} /></label>
+            <label>Statut<select value={form.strategicStatus} onChange={(event) => setForm({ ...form, strategicStatus: event.target.value as CreateAssetPayload["strategicStatus"] })}>{strategicStatuses.map((status) => <option key={status}>{status}</option>)}</select></label>
+            <div className="formActions">
+              <button type="submit">{editingId ? "Enregistrer" : "Creer"}</button>
+              {editingId ? <button className="secondaryButton" type="button" onClick={() => { setEditingId(null); setForm(emptyAsset); }}>Annuler</button> : null}
+            </div>
+          </form>
+        </Panel>
+
+        <Panel title="Actifs suivis">
+          <QueryState isLoading={assetsQuery.isLoading} error={assetsQuery.error}>
+            <div className="tableWrap compactTable">
+              <table>
+                <thead><tr><th>Symbole</th><th>Nom</th><th>Type</th><th>Statut</th><th></th></tr></thead>
+                <tbody>
+                  {(assetsQuery.data ?? []).map((asset) => (
+                    <tr key={asset.id}>
+                      <td><strong>{asset.symbol}</strong></td>
+                      <td>{asset.name}</td>
+                      <td>{asset.type}</td>
+                      <td><span className="status">{asset.strategicStatus}</span></td>
+                      <td><button className="linkButton" onClick={() => edit(asset)} type="button">Modifier</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </QueryState>
+        </Panel>
+      </section>
+    </>
+  );
+}

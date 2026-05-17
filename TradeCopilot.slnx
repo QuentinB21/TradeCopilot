@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TradeCopilot.Api/TradeCopilot.Api.csproj" />
+    <Project Path="src/TradeCopilot.Application/TradeCopilot.Application.csproj" />
+    <Project Path="src/TradeCopilot.Domain/TradeCopilot.Domain.csproj" />
+    <Project Path="src/TradeCopilot.Infrastructure/TradeCopilot.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TradeCopilot.Tests/TradeCopilot.Tests.csproj" />
+  </Folder>
+</Solution>

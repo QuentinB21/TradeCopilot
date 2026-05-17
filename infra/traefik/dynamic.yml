@@ -1,0 +1,26 @@
+http:
+  routers:
+    tradecopilot-api:
+      rule: "PathPrefix(`/api`) || PathPrefix(`/swagger`)"
+      entryPoints:
+        - web
+      service: tradecopilot-api
+      priority: 100
+
+    tradecopilot-client:
+      rule: "PathPrefix(`/`)"
+      entryPoints:
+        - web
+      service: tradecopilot-client
+      priority: 1
+
+  services:
+    tradecopilot-api:
+      loadBalancer:
+        servers:
+          - url: "http://api:8080"
+
+    tradecopilot-client:
+      loadBalancer:
+        servers:
+          - url: "http://client:80"
