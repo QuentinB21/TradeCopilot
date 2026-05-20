@@ -1,6 +1,5 @@
 using TradeCopilot.Application;
 using TradeCopilot.Domain;
-using TradeCopilot.Infrastructure;
 
 namespace TradeCopilot.Tests;
 
@@ -9,7 +8,7 @@ public sealed class MonthlyInvestmentPlannerTests
     [Fact]
     public void Splits_monthly_investment_between_pea_and_trade_republic()
     {
-        var seed = TradeCopilotSeedData.Create();
+        var seed = TestInvestmentSeedData.Create();
         var positions = new PositionCalculator().Calculate(
             seed.Portfolios,
             seed.Assets,

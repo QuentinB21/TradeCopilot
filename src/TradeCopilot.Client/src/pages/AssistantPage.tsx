@@ -2,26 +2,29 @@ import { useMutation } from "@tanstack/react-query";
 import { BrainCircuit } from "lucide-react";
 import { useState } from "react";
 import { tradeCopilotApi } from "../api/tradeCopilotApi";
+import { DecimalInput } from "../components/DecimalInput";
 import { formatCurrency, formatPercent } from "../lib/format";
+import { parseDecimalInput } from "../lib/numberInput";
 import { Metric } from "../components/Metric";
 import { PageHeader } from "../components/PageHeader";
 import { Panel } from "../components/Panel";
 
 export function AssistantPage() {
-  const [amount, setAmount] = useState(400);
+  const [amount, setAmount] = useState("400");
   const monthlyPlan = useMutation({ mutationFn: tradeCopilotApi.createMonthlyPlan });
+  const amountValue = parseDecimalInput(amount);
 
   return (
     <>
       <PageHeader
         title="Assistant mensuel"
         description="Recommandation consultative selon l'allocation cible et les statuts strategiques."
-        action={<button className="ghostButton" onClick={() => monthlyPlan.mutate(amount)} type="button"><BrainCircuit size={18} /> Calculer</button>}
+        action={<button className="ghostButton" onClick={() => monthlyPlan.mutate(amountValue)} type="button"><BrainCircuit size={18} /> Calculer</button>}
       />
       <section className="grid">
         <Panel title="Parametres">
-          <form className="form" onSubmit={(event) => { event.preventDefault(); monthlyPlan.mutate(amount); }}>
-            <label>Montant a investir<input type="number" min={0} step={50} value={amount} onChange={(event) => setAmount(Number(event.target.value))} /></label>
+          <form className="form" onSubmit={(event) => { event.preventDefault(); monthlyPlan.mutate(amountValue); }}>
+            <label>Montant a investir<DecimalInput min={0} step={50} value={amount} onChange={setAmount} /></label>
             <button type="submit">Generer la recommandation</button>
           </form>
           {monthlyPlan.data ? (

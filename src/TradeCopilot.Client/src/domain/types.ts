@@ -35,6 +35,24 @@ export type Transaction = {
   fees: number;
   currency: string;
   comment: string | null;
+  importSource: string | null;
+  externalId: string | null;
+};
+
+export type TransactionImportProvider = "TradeRepublic";
+
+export type TransactionImportResult = {
+  rowsRead: number;
+  importedTransactions: number;
+  createdAssets: number;
+  duplicateRows: number;
+  skippedRows: number;
+  warnings: {
+    rowNumber: number | null;
+    code: string;
+    message: string;
+    recommendation: string;
+  }[];
 };
 
 export type AssetPrice = {
@@ -47,6 +65,30 @@ export type AssetPrice = {
   close: number;
   currency: string;
   source: string;
+};
+
+export type InstrumentSearchResult = {
+  symbol: string;
+  name: string;
+  exchange: string | null;
+  exchangeDisplay: string | null;
+  quoteType: string | null;
+  currency: string | null;
+  sector: string | null;
+  suggestedType: AssetType;
+  provider: string;
+};
+
+export type MarketQuote = {
+  symbol: string;
+  date: string;
+  open: number | null;
+  high: number | null;
+  low: number | null;
+  close: number;
+  currency: string;
+  provider: string;
+  retrievedAt: string;
 };
 
 export type Position = {
@@ -137,8 +179,10 @@ export type Strategy = {
 
 export type CreatePortfolioPayload = Omit<Portfolio, "id">;
 export type CreateAssetPayload = Omit<Asset, "id"> & { country: string | null; priceProvider: string | null };
-export type CreateTransactionPayload = Omit<Transaction, "id">;
+export type CreateTransactionPayload = Omit<Transaction, "id" | "importSource" | "externalId">;
 export type CreateAssetPricePayload = Omit<AssetPrice, "id">;
+export type UpdateTransactionPayload = Omit<Transaction, "id" | "importSource" | "externalId">;
+export type UpdateAssetPricePayload = Omit<AssetPrice, "id">;
 export type CreateAllocationRulePayload = Omit<AllocationRule, "id">;
 export type UpdateAllocationRulePayload = Omit<AllocationRule, "id" | "portfolioId" | "assetId">;
 export type CreateStrategyRulePayload = Omit<StrategyRule, "id">;

@@ -1,10 +1,10 @@
 using TradeCopilot.Domain;
 
-namespace TradeCopilot.Infrastructure;
+namespace TradeCopilot.Tests;
 
-public static class TradeCopilotSeedData
+public static class TestInvestmentSeedData
 {
-    public static TradeCopilotSeed Create()
+    public static TestInvestmentSeed Create()
     {
         var pea = new Portfolio
         {
@@ -90,7 +90,7 @@ public static class TradeCopilotSeedData
             StrategyRule(tradeRepublic.Id, spotify.Id, "Spotify sortie planifiee", "Ligne non strategique.", "Rebond significatif", "Preparer une sortie apres validation humaine.", 40)
         };
 
-        return new TradeCopilotSeed([pea, tradeRepublic], assets, transactions, prices, allocationRules, strategyRules);
+        return new TestInvestmentSeed([pea, tradeRepublic], assets, transactions, prices, allocationRules, strategyRules);
     }
 
     private static Asset Asset(Guid id, string name, string symbol, string? isin, AssetType type, string sector, StrategicStatus status) => new()
@@ -149,7 +149,7 @@ public static class TradeCopilotSeedData
     };
 }
 
-public sealed record TradeCopilotSeed(
+public sealed record TestInvestmentSeed(
     IReadOnlyList<Portfolio> Portfolios,
     IReadOnlyList<Asset> Assets,
     IReadOnlyList<Transaction> Transactions,

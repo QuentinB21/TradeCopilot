@@ -32,8 +32,21 @@ public sealed class EfInvestmentRepository(TradeCopilotDbContext dbContext) : II
     public async Task<IReadOnlyList<Transaction>> GetTransactionsAsync(CancellationToken cancellationToken = default) =>
         await dbContext.Transactions.AsNoTracking().ToListAsync(cancellationToken);
 
+    public async Task<Transaction?> GetTransactionByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+        await dbContext.Transactions.FirstOrDefaultAsync(transaction => transaction.Id == id, cancellationToken);
+
+    public async Task<IReadOnlySet<string>> GetImportedTransactionExternalIdsAsync(string importSource, CancellationToken cancellationToken = default) =>
+        await dbContext.Transactions
+            .AsNoTracking()
+            .Where(transaction => transaction.ImportSource == importSource && transaction.ExternalId != null)
+            .Select(transaction => transaction.ExternalId!)
+            .ToHashSetAsync(StringComparer.OrdinalIgnoreCase, cancellationToken);
+
     public async Task<IReadOnlyList<AssetPrice>> GetPricesAsync(CancellationToken cancellationToken = default) =>
         await dbContext.AssetPrices.AsNoTracking().ToListAsync(cancellationToken);
+
+    public async Task<AssetPrice?> GetPriceByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+        await dbContext.AssetPrices.FirstOrDefaultAsync(price => price.Id == id, cancellationToken);
 
     public async Task<IReadOnlyList<AllocationRule>> GetAllocationRulesAsync(CancellationToken cancellationToken = default) =>
         await dbContext.AllocationRules.AsNoTracking().ToListAsync(cancellationToken);
@@ -89,9 +102,39 @@ public sealed class EfInvestmentRepository(TradeCopilotDbContext dbContext) : II
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task AddTransactionsAsync(IReadOnlyCollection<Transaction> transactions, CancellationToken cancellationToken = default)
+    {
+        dbContext.Transactions.AddRange(transactions);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task UpdateTransactionAsync(Transaction transaction, CancellationToken cancellationToken = default)
+    {
+        dbContext.Transactions.Update(transaction);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task DeleteTransactionAsync(Transaction transaction, CancellationToken cancellationToken = default)
+    {
+        dbContext.Transactions.Remove(transaction);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task AddPriceAsync(AssetPrice price, CancellationToken cancellationToken = default)
     {
         dbContext.AssetPrices.Add(price);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task UpdatePriceAsync(AssetPrice price, CancellationToken cancellationToken = default)
+    {
+        dbContext.AssetPrices.Update(price);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task DeletePriceAsync(AssetPrice price, CancellationToken cancellationToken = default)
+    {
+        dbContext.AssetPrices.Remove(price);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 

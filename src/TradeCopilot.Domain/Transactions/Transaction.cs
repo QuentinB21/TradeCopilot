@@ -14,4 +14,6 @@ public sealed class Transaction
     public decimal Fees { get; set; }
     public required string Currency { get; set; }
     public string? Comment { get; set; }
+    public string? ImportSource { get; set; }
+    public string? ExternalId { get; set; }
 }

@@ -7,7 +7,7 @@ Le cahier des charges source est le fichier `Outil_de_suivi_dinvestissements.pdf
 ## Stack
 
 - Backend : ASP.NET Core Web API, .NET 10, architecture Domain/Application/Infrastructure.
-- Data : PostgreSQL via Entity Framework Core, creation et seed automatiques au demarrage API.
+- Data : PostgreSQL via Entity Framework Core, creation automatique du schema au demarrage API.
 - Jobs cible : Hangfire ou Quartz.NET dans un increment suivant.
 - Frontend : React, TypeScript, Vite, TanStack Query.
 - Deploiement cible : Docker Compose, VPS, reverse proxy HTTPS.
@@ -19,7 +19,7 @@ src/
   TradeCopilot.Api/             controllers REST, bootstrap HTTP, composition
   TradeCopilot.Application/     DTOs, services applicatifs, calculs, ports
   TradeCopilot.Domain/          entites et enums metier par bounded context
-  TradeCopilot.Infrastructure/  EF Core, repositories, seed, initialisation DB
+  TradeCopilot.Infrastructure/  EF Core, repositories, initialisation DB
   TradeCopilot.Client/          client React/Vite par vues fonctionnelles
 tests/
   TradeCopilot.Tests/           tests calculs et allocation
@@ -73,9 +73,34 @@ Endpoints utiles :
 - `GET /api/positions`
 - `POST /api/monthly-plan` avec `{ "amount": 400 }`
 - `GET /api/strategy`
-- `GET|POST|DELETE /api/allocation-rules`
-- `GET|POST|DELETE /api/strategy-rules`
-- `POST /api/transactions`
+- `GET|POST|PUT|DELETE /api/allocation-rules`
+- `GET|POST|PUT|DELETE /api/strategy-rules`
+- `GET|POST|PUT|DELETE /api/transactions`
+- `POST /api/transaction-imports` en `multipart/form-data` avec `provider`, `portfolioId`, `file`
+- `GET|POST|PUT|DELETE /api/prices`
+- `GET /api/market-data/instruments?query=air%20liquide`
+- `GET /api/market-data/quotes/AI.PA`
+
+## Donnees de marche
+
+Le MVP utilise un fournisseur gratuit sans cle API (`yahoo-finance`) pour deux usages :
+
+- rechercher un instrument par nom, ticker ou ISIN depuis la page Actifs ;
+- recuperer le dernier cours connu depuis la page Prix.
+
+Le fournisseur est encapsule derriere `IMarketDataProvider`. Il peut donc etre remplace plus tard par OpenFIGI + un fournisseur de prix, Twelve Data, Finnhub, EODHD ou une source payante sans changer les controllers ni le client.
+
+Pour les valeurs europeennes, le symbole court ne suffit souvent pas. Il faut utiliser le symbole fournisseur avec suffixe de place, par exemple `AI.PA` pour Air Liquide a Paris ou `QDVE.DE` pour l'ETF cote en Allemagne. Si un actif a ete cree avec un ticker trop court, il peut etre corrige depuis l'ecran Actifs.
+
+## Imports CSV
+
+Les transactions peuvent etre importees depuis l'ecran Transactions. L'utilisateur choisit explicitement la provenance du fichier avant l'upload ; le backend selectionne ensuite la strategie de parsing correspondante.
+
+Source supportee actuellement :
+
+- `TradeRepublic` : export CSV avec colonnes `date`, `category`, `type`, `asset_class`, `symbol`, `shares`, `price`, `amount`, `fee`, `tax`, `currency`, `transaction_id`.
+
+Les transactions importees conservent `ImportSource` et `ExternalId` pour eviter les doublons lors d'un second import du meme fichier. Les actifs absents sont crees automatiquement avec le statut `Observation`, afin de ne pas influencer l'assistant mensuel sans validation utilisateur.
 
 ## Commandes frontend hors Docker
 
@@ -95,4 +120,11 @@ Le serveur Vite proxifie `/api` vers `http://localhost:5088`.
 docker compose up -d postgres
 ```
 
-La chaine de connexion par defaut est configuree dans `src/TradeCopilot.Api/appsettings.Development.json`. Au demarrage, l'API cree le schema avec EF Core si necessaire, puis insere le seed Quentin lorsque la base est vide.
+La chaine de connexion par defaut est configuree dans `src/TradeCopilot.Api/appsettings.Development.json`. Au demarrage, l'API cree le schema avec EF Core si necessaire. Aucune donnee de demo n'est inseree en environnement applicatif.
+
+Pour repartir d'une base locale vide :
+
+```powershell
+docker compose down -v
+docker compose up -d
+```

@@ -1,20 +1,37 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { tradeCopilotApi } from "../api/tradeCopilotApi";
+import { DecimalInput } from "../components/DecimalInput";
 import { allocationRuleStatuses, assetTypes, portfolioTypes, strategicStatuses } from "../domain/options";
 import type { AllocationRule, Asset, CreateAllocationRulePayload, CreateAssetPayload, CreatePortfolioPayload, CreateStrategyRulePayload, Portfolio, StrategyRule, UpdateAllocationRulePayload } from "../domain/types";
 import { formatPercent } from "../lib/format";
+import { parseDecimalInput, parseNullableDecimalInput, toNumberInput } from "../lib/numberInput";
 import { PageHeader } from "../components/PageHeader";
 import { Panel } from "../components/Panel";
 import { QueryState } from "../components/QueryState";
 
-const emptyPortfolio: CreatePortfolioPayload = {
+type PortfolioForm = Omit<CreatePortfolioPayload, "cashBalance" | "targetWeight"> & {
+  cashBalance: string;
+  targetWeight: string;
+};
+
+type AllocationRuleForm = Omit<CreateAllocationRulePayload, "targetWeight" | "minWeight" | "maxWeight"> & {
+  targetWeight: string;
+  minWeight: string;
+  maxWeight: string;
+};
+
+type StrategyRuleForm = Omit<CreateStrategyRulePayload, "priority"> & {
+  priority: string;
+};
+
+const emptyPortfolio: PortfolioForm = {
   name: "",
   type: "Pea",
   broker: "",
   baseCurrency: "EUR",
-  cashBalance: 0,
-  targetWeight: 0
+  cashBalance: "",
+  targetWeight: ""
 };
 
 const emptyAsset: CreateAssetPayload = {
@@ -29,23 +46,23 @@ const emptyAsset: CreateAssetPayload = {
   strategicStatus: "Conviction"
 };
 
-const emptyAllocationRule: CreateAllocationRulePayload = {
+const emptyAllocationRule: AllocationRuleForm = {
   portfolioId: "",
   assetId: "",
-  targetWeight: 0,
-  minWeight: null,
-  maxWeight: null,
+  targetWeight: "",
+  minWeight: "",
+  maxWeight: "",
   status: "Active"
 };
 
-const emptyStrategyRule: CreateStrategyRulePayload = {
+const emptyStrategyRule: StrategyRuleForm = {
   portfolioId: null,
   assetId: null,
   name: "",
   description: "",
   triggerCondition: "",
   recommendedAction: "",
-  priority: 100,
+  priority: "100",
   isActive: true
 };
 
@@ -59,10 +76,10 @@ export function StrategyPage() {
   const assetsQuery = useQuery({ queryKey: ["assets"], queryFn: tradeCopilotApi.getAssets });
   const allocationRulesQuery = useQuery({ queryKey: ["allocation-rules"], queryFn: tradeCopilotApi.getAllocationRules });
   const strategyRulesQuery = useQuery({ queryKey: ["strategy-rules"], queryFn: tradeCopilotApi.getStrategyRules });
-  const [portfolioForm, setPortfolioForm] = useState<CreatePortfolioPayload>(emptyPortfolio);
+  const [portfolioForm, setPortfolioForm] = useState<PortfolioForm>(emptyPortfolio);
   const [assetForm, setAssetForm] = useState<CreateAssetPayload>(emptyAsset);
-  const [allocationForm, setAllocationForm] = useState<CreateAllocationRulePayload>(emptyAllocationRule);
-  const [strategyRuleForm, setStrategyRuleForm] = useState<CreateStrategyRulePayload>(emptyStrategyRule);
+  const [allocationForm, setAllocationForm] = useState<AllocationRuleForm>(emptyAllocationRule);
+  const [strategyRuleForm, setStrategyRuleForm] = useState<StrategyRuleForm>(emptyStrategyRule);
   const [editingPortfolioId, setEditingPortfolioId] = useState<string | null>(null);
   const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
   const [editingAllocationRuleId, setEditingAllocationRuleId] = useState<string | null>(null);
@@ -96,8 +113,8 @@ export function StrategyPage() {
       type: portfolio.type,
       broker: portfolio.broker,
       baseCurrency: portfolio.baseCurrency,
-      cashBalance: portfolio.cashBalance,
-      targetWeight: portfolio.targetWeight
+      cashBalance: toNumberInput(portfolio.cashBalance),
+      targetWeight: toNumberInput(portfolio.targetWeight)
     });
   };
 
@@ -131,9 +148,9 @@ export function StrategyPage() {
     setAllocationForm({
       portfolioId: rule.portfolioId,
       assetId: rule.assetId,
-      targetWeight: rule.targetWeight,
-      minWeight: rule.minWeight,
-      maxWeight: rule.maxWeight,
+      targetWeight: toNumberInput(rule.targetWeight),
+      minWeight: toNumberInput(rule.minWeight),
+      maxWeight: toNumberInput(rule.maxWeight),
       status: rule.status
     });
   };
@@ -152,15 +169,22 @@ export function StrategyPage() {
       description: rule.description,
       triggerCondition: rule.triggerCondition,
       recommendedAction: rule.recommendedAction,
-      priority: rule.priority,
+      priority: toNumberInput(rule.priority),
       isActive: rule.isActive
     });
   };
 
   const savePortfolio = useMutation({
-    mutationFn: () => editingPortfolioId
-      ? tradeCopilotApi.updatePortfolio(editingPortfolioId, portfolioForm)
-      : tradeCopilotApi.createPortfolio(portfolioForm),
+    mutationFn: () => {
+      const payload: CreatePortfolioPayload = {
+        ...portfolioForm,
+        cashBalance: parseDecimalInput(portfolioForm.cashBalance),
+        targetWeight: parseDecimalInput(portfolioForm.targetWeight)
+      };
+      return editingPortfolioId
+        ? tradeCopilotApi.updatePortfolio(editingPortfolioId, payload)
+        : tradeCopilotApi.createPortfolio(payload);
+    },
     onSuccess: async () => {
       resetPortfolioForm();
       await invalidateConfiguration();
@@ -179,17 +203,23 @@ export function StrategyPage() {
   const deleteAsset = useMutation({ mutationFn: tradeCopilotApi.deleteAsset, onSuccess: invalidateConfiguration });
   const saveAllocationRule = useMutation({
     mutationFn: () => {
+      const createPayload: CreateAllocationRulePayload = {
+        ...allocationForm,
+        targetWeight: parseDecimalInput(allocationForm.targetWeight),
+        minWeight: parseNullableDecimalInput(allocationForm.minWeight),
+        maxWeight: parseNullableDecimalInput(allocationForm.maxWeight)
+      };
       if (!editingAllocationRuleId) {
-        return tradeCopilotApi.createAllocationRule(allocationForm);
+        return tradeCopilotApi.createAllocationRule(createPayload);
       }
 
-      const payload: UpdateAllocationRulePayload = {
-        targetWeight: allocationForm.targetWeight,
-        minWeight: allocationForm.minWeight,
-        maxWeight: allocationForm.maxWeight,
+      const updatePayload: UpdateAllocationRulePayload = {
+        targetWeight: parseDecimalInput(allocationForm.targetWeight),
+        minWeight: parseNullableDecimalInput(allocationForm.minWeight),
+        maxWeight: parseNullableDecimalInput(allocationForm.maxWeight),
         status: allocationForm.status
       };
-      return tradeCopilotApi.updateAllocationRule(editingAllocationRuleId, payload);
+      return tradeCopilotApi.updateAllocationRule(editingAllocationRuleId, updatePayload);
     },
     onSuccess: async () => {
       resetAllocationForm();
@@ -198,9 +228,15 @@ export function StrategyPage() {
   });
   const deleteAllocationRule = useMutation({ mutationFn: tradeCopilotApi.deleteAllocationRule, onSuccess: invalidateConfiguration });
   const saveStrategyRule = useMutation({
-    mutationFn: () => editingStrategyRuleId
-      ? tradeCopilotApi.updateStrategyRule(editingStrategyRuleId, strategyRuleForm)
-      : tradeCopilotApi.createStrategyRule(strategyRuleForm),
+    mutationFn: () => {
+      const payload: CreateStrategyRulePayload = {
+        ...strategyRuleForm,
+        priority: parseDecimalInput(strategyRuleForm.priority, 100)
+      };
+      return editingStrategyRuleId
+        ? tradeCopilotApi.updateStrategyRule(editingStrategyRuleId, payload)
+        : tradeCopilotApi.createStrategyRule(payload);
+    },
     onSuccess: async () => {
       resetStrategyRuleForm();
       await invalidateConfiguration();
@@ -221,7 +257,7 @@ export function StrategyPage() {
             <label>Nom<input value={portfolioForm.name} onChange={(event) => setPortfolioForm({ ...portfolioForm, name: event.target.value })} required /></label>
             <label>Type<select value={portfolioForm.type} onChange={(event) => setPortfolioForm({ ...portfolioForm, type: event.target.value as CreatePortfolioPayload["type"] })}>{portfolioTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
             <label>Courtier<input value={portfolioForm.broker} onChange={(event) => setPortfolioForm({ ...portfolioForm, broker: event.target.value })} required /></label>
-            <label>Cle<input type="number" min={0} max={1} step="0.01" value={portfolioForm.targetWeight} onChange={(event) => setPortfolioForm({ ...portfolioForm, targetWeight: Number(event.target.value) })} /></label>
+            <label>Cle<DecimalInput min={0} max={1} step="0.01" value={portfolioForm.targetWeight} onChange={(value) => setPortfolioForm({ ...portfolioForm, targetWeight: value })} /></label>
             <div className="formActions">
               <button type="submit">{editingPortfolioId ? "Mettre a jour" : "Ajouter le portefeuille"}</button>
               {editingPortfolioId && <button className="secondaryButton" type="button" onClick={resetPortfolioForm}>Annuler</button>}
@@ -274,7 +310,7 @@ export function StrategyPage() {
           <form className="form" onSubmit={(event) => { event.preventDefault(); saveAllocationRule.mutate(); }}>
             <label>Portefeuille<select value={allocationForm.portfolioId} onChange={(event) => setAllocationForm({ ...allocationForm, portfolioId: event.target.value })} required disabled={Boolean(editingAllocationRuleId)}><option value="">Selectionner</option>{portfolios.map((portfolio) => <option value={portfolio.id} key={portfolio.id}>{portfolio.name}</option>)}</select></label>
             <label>Actif<select value={allocationForm.assetId} onChange={(event) => setAllocationForm({ ...allocationForm, assetId: event.target.value })} required disabled={Boolean(editingAllocationRuleId)}><option value="">Selectionner</option>{assets.map((asset) => <option value={asset.id} key={asset.id}>{asset.symbol} - {asset.name}</option>)}</select></label>
-            <label>Cle<input type="number" min={0} max={1} step="0.01" value={allocationForm.targetWeight} onChange={(event) => setAllocationForm({ ...allocationForm, targetWeight: Number(event.target.value) })} /></label>
+            <label>Cle<DecimalInput min={0} max={1} step="0.01" value={allocationForm.targetWeight} onChange={(value) => setAllocationForm({ ...allocationForm, targetWeight: value })} /></label>
             <label>Statut<select value={allocationForm.status} onChange={(event) => setAllocationForm({ ...allocationForm, status: event.target.value as CreateAllocationRulePayload["status"] })}>{allocationRuleStatuses.map((status) => <option key={status}>{status}</option>)}</select></label>
             <div className="formActions">
               <button type="submit" disabled={!allocationForm.portfolioId || !allocationForm.assetId}>{editingAllocationRuleId ? "Mettre a jour" : "Ajouter la cle"}</button>
@@ -308,7 +344,7 @@ export function StrategyPage() {
             <label>Actif<select value={strategyRuleForm.assetId ?? ""} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, assetId: event.target.value || null })}><option value="">Tous</option>{assets.map((asset) => <option value={asset.id} key={asset.id}>{asset.symbol} - {asset.name}</option>)}</select></label>
             <label>Condition<input value={strategyRuleForm.triggerCondition ?? ""} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, triggerCondition: event.target.value || null })} /></label>
             <label>Action recommandee<input value={strategyRuleForm.recommendedAction} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, recommendedAction: event.target.value })} required /></label>
-            <label>Priorite<input type="number" value={strategyRuleForm.priority} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, priority: Number(event.target.value) })} /></label>
+            <label>Priorite<DecimalInput value={strategyRuleForm.priority} onChange={(value) => setStrategyRuleForm({ ...strategyRuleForm, priority: value })} /></label>
             <div className="formActions">
               <button type="submit">{editingStrategyRuleId ? "Mettre a jour" : "Ajouter la regle"}</button>
               {editingStrategyRuleId && <button className="secondaryButton" type="button" onClick={resetStrategyRuleForm}>Annuler</button>}

@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { tradeCopilotApi } from "../api/tradeCopilotApi";
 import { assetTypes, strategicStatuses } from "../domain/options";
-import type { Asset, CreateAssetPayload } from "../domain/types";
+import type { Asset, CreateAssetPayload, InstrumentSearchResult } from "../domain/types";
 import { PageHeader } from "../components/PageHeader";
 import { Panel } from "../components/Panel";
 import { QueryState } from "../components/QueryState";
@@ -24,6 +24,35 @@ export function AssetsPage() {
   const assetsQuery = useQuery({ queryKey: ["assets"], queryFn: tradeCopilotApi.getAssets });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<CreateAssetPayload>(emptyAsset);
+  const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<InstrumentSearchResult[]>([]);
+
+  const searchInstruments = useMutation({
+    mutationFn: () => tradeCopilotApi.searchInstruments(search),
+    onSuccess: setSearchResults
+  });
+
+  const useInstrument = useMutation({
+    mutationFn: async (instrument: InstrumentSearchResult) => {
+      try {
+        const quote = await tradeCopilotApi.getMarketQuote(instrument.symbol);
+        return { instrument, currency: quote.currency };
+      } catch {
+        return { instrument, currency: instrument.currency ?? form.currency };
+      }
+    },
+    onSuccess: ({ instrument, currency }) => {
+      setForm({
+        ...form,
+        name: instrument.name,
+        symbol: instrument.symbol,
+        type: instrument.suggestedType,
+        currency,
+        sector: instrument.sector,
+        priceProvider: instrument.provider
+      });
+    }
+  });
 
   const saveAsset = useMutation({
     mutationFn: () => editingId ? tradeCopilotApi.updateAsset(editingId, form) : tradeCopilotApi.createAsset(form),
@@ -57,6 +86,21 @@ export function AssetsPage() {
       <PageHeader title="Actifs" description="Referentiel des ETF, actions et statuts strategiques." />
       <section className="grid">
         <Panel title={editingId ? "Modifier un actif" : "Nouvel actif"}>
+          <form className="form searchForm" onSubmit={(event) => { event.preventDefault(); searchInstruments.mutate(); }}>
+            <label>Rechercher par nom, ticker ou ISIN<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Ex: Air Liquide, AI.PA, US0378331005" /></label>
+            <button type="submit" disabled={search.trim().length < 2 || searchInstruments.isPending}>Rechercher</button>
+          </form>
+          {searchResults.length > 0 ? (
+            <div className="searchResults">
+              {searchResults.map((result) => (
+                <button type="button" key={`${result.provider}-${result.symbol}`} onClick={() => useInstrument.mutate(result)}>
+                  <strong>{result.symbol}</strong>
+                  <span>{result.name}</span>
+                  <small>{result.exchangeDisplay ?? result.exchange ?? result.provider}</small>
+                </button>
+              ))}
+            </div>
+          ) : null}
           <form className="form" onSubmit={(event) => { event.preventDefault(); saveAsset.mutate(); }}>
             <label>Nom<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required /></label>
             <label>Symbole<input value={form.symbol} onChange={(event) => setForm({ ...form, symbol: event.target.value })} required /></label>

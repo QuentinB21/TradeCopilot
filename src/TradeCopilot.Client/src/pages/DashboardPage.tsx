@@ -28,6 +28,18 @@ function DashboardContent({ dashboard }: { dashboard: Dashboard }) {
     [dashboard.positions]
   );
 
+  if (dashboard.portfolios.length === 0) {
+    return (
+      <Panel title="Demarrage">
+        <div className="setupSteps">
+          <div><strong>1. Strategie</strong><span>Creer les portefeuilles, actifs, cles et regles.</span></div>
+          <div><strong>2. Positions</strong><span>Saisir les lignes deja detenues avec quantite et PRU.</span></div>
+          <div><strong>3. Prix</strong><span>Ajouter un dernier cours pour valoriser chaque ligne.</span></div>
+        </div>
+      </Panel>
+    );
+  }
+
   return (
     <>
       <section className="metrics">
@@ -62,6 +74,7 @@ function PortfolioBars({ dashboard }: { dashboard: Dashboard }) {
 
   return (
     <div className="bars">
+      {dashboard.portfolios.length === 0 ? <p className="emptyState">Aucun portefeuille configure.</p> : null}
       {dashboard.portfolios.map((portfolio) => (
         <div className="barRow" key={portfolio.portfolioId}>
           <span>{portfolio.name}</span>
@@ -80,6 +93,7 @@ function AllocationDrift({ positions }: { positions: Position[] }) {
 
   return (
     <div className="compactList">
+      {tracked.length === 0 ? <p className="emptyState">Aucune cible d'allocation configuree.</p> : null}
       {tracked.map((position) => (
         <div className="compactRow" key={`${position.portfolioId}-${position.assetId}`}>
           <div>
@@ -98,6 +112,7 @@ function AllocationDrift({ positions }: { positions: Position[] }) {
 export function PositionTable({ positions }: { positions: Position[] }) {
   return (
     <div className="tableWrap">
+      {positions.length === 0 ? <p className="emptyState">Aucune position valorisee.</p> : null}
       <table>
         <thead>
           <tr>

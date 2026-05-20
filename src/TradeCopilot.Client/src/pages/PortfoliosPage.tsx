@@ -1,30 +1,43 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { tradeCopilotApi } from "../api/tradeCopilotApi";
+import { DecimalInput } from "../components/DecimalInput";
 import { portfolioTypes } from "../domain/options";
 import type { CreatePortfolioPayload, Portfolio } from "../domain/types";
 import { formatCurrency } from "../lib/format";
+import { parseDecimalInput, toNumberInput } from "../lib/numberInput";
 import { PageHeader } from "../components/PageHeader";
 import { Panel } from "../components/Panel";
 import { QueryState } from "../components/QueryState";
 
-const emptyPortfolio: CreatePortfolioPayload = {
+type PortfolioForm = Omit<CreatePortfolioPayload, "cashBalance" | "targetWeight"> & {
+  cashBalance: string;
+  targetWeight: string;
+};
+
+const emptyPortfolio: PortfolioForm = {
   name: "",
   type: "Pea",
   broker: "",
   baseCurrency: "EUR",
-  cashBalance: 0,
-  targetWeight: 0
+  cashBalance: "",
+  targetWeight: ""
 };
 
 export function PortfoliosPage() {
   const queryClient = useQueryClient();
   const portfoliosQuery = useQuery({ queryKey: ["portfolios"], queryFn: tradeCopilotApi.getPortfolios });
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<CreatePortfolioPayload>(emptyPortfolio);
+  const [form, setForm] = useState<PortfolioForm>(emptyPortfolio);
+
+  const toPayload = (): CreatePortfolioPayload => ({
+    ...form,
+    cashBalance: parseDecimalInput(form.cashBalance),
+    targetWeight: parseDecimalInput(form.targetWeight)
+  });
 
   const savePortfolio = useMutation({
-    mutationFn: () => editingId ? tradeCopilotApi.updatePortfolio(editingId, form) : tradeCopilotApi.createPortfolio(form),
+    mutationFn: () => editingId ? tradeCopilotApi.updatePortfolio(editingId, toPayload()) : tradeCopilotApi.createPortfolio(toPayload()),
     onSuccess: async () => {
       setEditingId(null);
       setForm(emptyPortfolio);
@@ -42,8 +55,8 @@ export function PortfoliosPage() {
       type: portfolio.type,
       broker: portfolio.broker,
       baseCurrency: portfolio.baseCurrency,
-      cashBalance: portfolio.cashBalance,
-      targetWeight: portfolio.targetWeight
+      cashBalance: toNumberInput(portfolio.cashBalance),
+      targetWeight: toNumberInput(portfolio.targetWeight)
     });
   }
 
@@ -57,8 +70,8 @@ export function PortfoliosPage() {
             <label>Type<select value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value as CreatePortfolioPayload["type"] })}>{portfolioTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
             <label>Courtier<input value={form.broker} onChange={(event) => setForm({ ...form, broker: event.target.value })} required /></label>
             <label>Devise<input value={form.baseCurrency} onChange={(event) => setForm({ ...form, baseCurrency: event.target.value })} required maxLength={3} /></label>
-            <label>Cash<input type="number" step="0.01" value={form.cashBalance} onChange={(event) => setForm({ ...form, cashBalance: Number(event.target.value) })} /></label>
-            <label>Cle globale<input type="number" step="0.01" min={0} max={1} value={form.targetWeight} onChange={(event) => setForm({ ...form, targetWeight: Number(event.target.value) })} /></label>
+            <label>Cash<DecimalInput step="0.01" value={form.cashBalance} onChange={(value) => setForm({ ...form, cashBalance: value })} /></label>
+            <label>Cle globale<DecimalInput step="0.01" min={0} max={1} value={form.targetWeight} onChange={(value) => setForm({ ...form, targetWeight: value })} /></label>
             <div className="formActions">
               <button type="submit">{editingId ? "Enregistrer" : "Creer"}</button>
               {editingId ? <button className="secondaryButton" type="button" onClick={() => { setEditingId(null); setForm(emptyPortfolio); }}>Annuler</button> : null}

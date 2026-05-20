@@ -32,6 +32,20 @@ export function postJson<T>(path: string, body: unknown) {
   });
 }
 
+export async function postForm<T>(path: string, body: FormData): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    body
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `API ${path} returned ${response.status}`);
+  }
+
+  return response.json() as Promise<T>;
+}
+
 export function putJson<T>(path: string, body: unknown) {
   return requestJson<T>(path, {
     method: "PUT",

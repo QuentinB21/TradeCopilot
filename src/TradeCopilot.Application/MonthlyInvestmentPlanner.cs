@@ -6,9 +6,6 @@ namespace TradeCopilot.Application;
 
 public sealed class MonthlyInvestmentPlanner
 {
-    private const decimal PeaTargetShare = 0.80m;
-    private const decimal TradeRepublicTargetShare = 0.20m;
-
     public MonthlyInvestmentPlanDto BuildPlan(
         decimal amount,
         IReadOnlyList<Portfolio> portfolios,
@@ -22,31 +19,22 @@ public sealed class MonthlyInvestmentPlanner
             "Les lignes gelees, en observation stricte ou en sortie planifiee sont exclues des renforcements."
         };
 
-        var pea = portfolios.FirstOrDefault(portfolio => portfolio.Type == PortfolioType.Pea);
-        var tradeRepublic = portfolios.FirstOrDefault(portfolio =>
-            portfolio.Type == PortfolioType.SecuritiesAccount &&
-            portfolio.Broker.Contains("Trade Republic", StringComparison.OrdinalIgnoreCase));
-
+        var configuredPortfolios = portfolios
+            .Where(portfolio => portfolio.TargetWeight > 0m)
+            .OrderBy(portfolio => portfolio.Name)
+            .ToList();
+        var totalPortfolioTarget = configuredPortfolios.Sum(portfolio => portfolio.TargetWeight);
         var envelopes = new List<InvestmentEnvelopeRecommendationDto>();
 
-        if (pea is not null)
+        foreach (var portfolio in configuredPortfolios)
         {
+            var normalizedPortfolioWeight = totalPortfolioTarget > 0m ? portfolio.TargetWeight / totalPortfolioTarget : 0m;
             envelopes.Add(BuildEnvelope(
-                pea,
-                amount * PeaTargetShare,
+                portfolio,
+                amount * normalizedPortfolioWeight,
                 assets,
-                positions.Where(position => position.PortfolioId == pea.Id).ToList(),
-                allocationRules.Where(rule => rule.PortfolioId == pea.Id).ToList()));
-        }
-
-        if (tradeRepublic is not null)
-        {
-            envelopes.Add(BuildEnvelope(
-                tradeRepublic,
-                amount * TradeRepublicTargetShare,
-                assets,
-                positions.Where(position => position.PortfolioId == tradeRepublic.Id).ToList(),
-                allocationRules.Where(rule => rule.PortfolioId == tradeRepublic.Id).ToList()));
+                positions.Where(position => position.PortfolioId == portfolio.Id).ToList(),
+                allocationRules.Where(rule => rule.PortfolioId == portfolio.Id).ToList()));
         }
 
         return new MonthlyInvestmentPlanDto(decimal.Round(amount, 2), envelopes, notes);

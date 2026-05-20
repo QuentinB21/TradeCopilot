@@ -2,8 +2,7 @@ using TradeCopilot.Domain;
 
 namespace TradeCopilot.Application.Contracts.Transactions;
 
-public sealed record TransactionDto(
-    Guid Id,
+public sealed record UpdateTransactionRequest(
     Guid PortfolioId,
     Guid? AssetId,
     TransactionType Type,
@@ -12,6 +11,4 @@ public sealed record TransactionDto(
     decimal UnitPrice,
     decimal Fees,
     string Currency,
-    string? Comment,
-    string? ImportSource,
-    string? ExternalId);
+    string? Comment);

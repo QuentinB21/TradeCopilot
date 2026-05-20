@@ -2,7 +2,9 @@ using Microsoft.Extensions.DependencyInjection;
 using TradeCopilot.Application.Services.Assets;
 using TradeCopilot.Application.Services.Allocation;
 using TradeCopilot.Application.Services.Dashboard;
+using TradeCopilot.Application.Services.Imports;
 using TradeCopilot.Application.Services.InvestmentPlans;
+using TradeCopilot.Application.Services.MarketData;
 using TradeCopilot.Application.Services.Portfolios;
 using TradeCopilot.Application.Services.Positions;
 using TradeCopilot.Application.Services.Prices;
@@ -26,8 +28,11 @@ public static class DependencyInjection
         services.AddScoped<IPositionQueryService, PositionQueryService>();
         services.AddScoped<IDashboardQueryService, DashboardQueryService>();
         services.AddScoped<IInvestmentPlanService, InvestmentPlanService>();
+        services.AddScoped<IMarketDataService, MarketDataService>();
         services.AddScoped<IStrategyService, StrategyService>();
         services.AddScoped<IStrategyRuleService, StrategyRuleService>();
+        services.AddScoped<ITransactionImportService, TransactionImportService>();
+        services.AddScoped<ITransactionImportStrategy, TradeRepublicTransactionImportStrategy>();
 
         return services;
     }

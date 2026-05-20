@@ -54,6 +54,11 @@ public sealed class TradeCopilotDbContext(DbContextOptions<TradeCopilotDbContext
             entity.Property(transaction => transaction.Fees).HasPrecision(18, 4);
             entity.Property(transaction => transaction.Currency).HasMaxLength(3);
             entity.Property(transaction => transaction.Comment).HasMaxLength(800);
+            entity.Property(transaction => transaction.ImportSource).HasMaxLength(80);
+            entity.Property(transaction => transaction.ExternalId).HasMaxLength(160);
+            entity.HasIndex(transaction => new { transaction.ImportSource, transaction.ExternalId })
+                .IsUnique()
+                .HasFilter("\"ImportSource\" IS NOT NULL AND \"ExternalId\" IS NOT NULL");
         });
 
         modelBuilder.Entity<AssetPrice>(entity =>
