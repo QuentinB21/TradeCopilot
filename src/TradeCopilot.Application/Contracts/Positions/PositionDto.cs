@@ -13,6 +13,7 @@ public sealed record PositionDto(
     decimal AverageBuyPrice,
     decimal InvestedAmount,
     decimal MarketPrice,
+    bool HasMarketPrice,
     decimal MarketValue,
     decimal UnrealizedGain,
     decimal UnrealizedGainPercent,

@@ -35,7 +35,8 @@ public sealed class PriceService(IInvestmentRepository repository) : IPriceServi
             Low = request.Low,
             Close = request.Close,
             Currency = request.Currency.Trim().ToUpperInvariant(),
-            Source = request.Source.Trim()
+            Source = request.Source.Trim(),
+            RetrievedAt = DateTimeOffset.UtcNow
         };
 
         await repository.AddPriceAsync(price, cancellationToken);
@@ -61,6 +62,7 @@ public sealed class PriceService(IInvestmentRepository repository) : IPriceServi
         price.Close = request.Close;
         price.Currency = request.Currency.Trim().ToUpperInvariant();
         price.Source = request.Source.Trim();
+        price.RetrievedAt = DateTimeOffset.UtcNow;
 
         await repository.UpdatePriceAsync(price, cancellationToken);
         return ToDto(price);
@@ -87,5 +89,6 @@ public sealed class PriceService(IInvestmentRepository repository) : IPriceServi
         price.Low,
         price.Close,
         price.Currency,
-        price.Source);
+        price.Source,
+        price.RetrievedAt);
 }

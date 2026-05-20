@@ -42,6 +42,7 @@ public sealed class PositionCalculatorTests
         Assert.Equal(20m, position.Quantity);
         Assert.Equal(11.1m, position.AverageBuyPrice);
         Assert.Equal(222m, position.InvestedAmount);
+        Assert.True(position.HasMarketPrice);
         Assert.Equal(260m, position.MarketValue);
         Assert.Equal(38m, position.UnrealizedGain);
     }
@@ -93,6 +94,41 @@ public sealed class PositionCalculatorTests
         Assert.Equal(100m, position.InvestedAmount);
         Assert.Equal(29m, position.RealizedGain);
         Assert.Equal(40m, position.UnrealizedGain);
+    }
+
+    [Fact]
+    public void Uses_average_buy_price_as_estimated_value_when_market_price_is_missing()
+    {
+        var portfolio = new Portfolio
+        {
+            Id = Guid.NewGuid(),
+            Name = "Trade Republic",
+            Type = PortfolioType.SecuritiesAccount,
+            Broker = "Trade Republic",
+            BaseCurrency = "EUR"
+        };
+        var asset = new Asset
+        {
+            Id = Guid.NewGuid(),
+            Name = "Microsoft",
+            Symbol = "MSFT",
+            Type = AssetType.Stock,
+            Currency = "EUR",
+            StrategicStatus = StrategicStatus.Core
+        };
+
+        var transactions = new[]
+        {
+            Buy(portfolio.Id, asset.Id, new DateOnly(2026, 1, 10), 100m, 10m, 5m)
+        };
+
+        var position = Assert.Single(new PositionCalculator().Calculate([portfolio], [asset], transactions, [], []));
+
+        Assert.False(position.HasMarketPrice);
+        Assert.Equal(100.5m, position.AverageBuyPrice);
+        Assert.Equal(100.5m, position.MarketPrice);
+        Assert.Equal(1005m, position.MarketValue);
+        Assert.Equal(0m, position.UnrealizedGain);
     }
 
     private static Transaction Buy(Guid portfolioId, Guid assetId, DateOnly date, decimal unitPrice, decimal quantity, decimal fees) => new()

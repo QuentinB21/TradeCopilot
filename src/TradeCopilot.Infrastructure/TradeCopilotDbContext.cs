@@ -75,6 +75,7 @@ public sealed class TradeCopilotDbContext(DbContextOptions<TradeCopilotDbContext
             entity.Property(price => price.Close).HasPrecision(18, 6);
             entity.Property(price => price.Currency).HasMaxLength(3);
             entity.Property(price => price.Source).HasMaxLength(80);
+            entity.Property(price => price.RetrievedAt);
         });
 
         modelBuilder.Entity<AllocationRule>(entity =>

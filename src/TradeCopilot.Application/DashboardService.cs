@@ -13,28 +13,11 @@ public sealed class DashboardService(PositionCalculator positionCalculator)
         IReadOnlyList<AllocationRule> allocationRules)
     {
         var positions = positionCalculator.Calculate(portfolios, assets, transactions, prices, allocationRules);
-        var portfolioSummaries = positions
-            .GroupBy(position => new { position.PortfolioId, position.PortfolioName })
-            .Select(group =>
-            {
-                var marketValue = group.Sum(position => position.MarketValue);
-                var invested = group.Sum(position => position.InvestedAmount);
-                var gain = group.Sum(position => position.UnrealizedGain);
-
-                return new PortfolioSummaryDto(
-                    group.Key.PortfolioId,
-                    group.Key.PortfolioName,
-                    marketValue,
-                    invested,
-                    gain,
-                    invested > 0m ? decimal.Round(gain / invested, 4, MidpointRounding.AwayFromZero) : 0m);
-            })
-            .OrderBy(summary => summary.Name)
-            .ToList();
-
         var totalMarketValue = positions.Sum(position => position.MarketValue);
         var totalInvested = positions.Sum(position => position.InvestedAmount);
         var totalGain = positions.Sum(position => position.UnrealizedGain);
+        var portfolioSummaries = BuildPortfolioSummaries(portfolios, positions, totalMarketValue);
+        var history = BuildHistory(portfolios, assets, transactions, prices, allocationRules);
 
         return new DashboardDto(
             totalMarketValue,
@@ -42,6 +25,110 @@ public sealed class DashboardService(PositionCalculator positionCalculator)
             totalGain,
             totalInvested > 0m ? decimal.Round(totalGain / totalInvested, 4, MidpointRounding.AwayFromZero) : 0m,
             portfolioSummaries,
-            positions.OrderBy(position => position.PortfolioName).ThenByDescending(position => position.MarketValue).ToList());
+            positions.OrderBy(position => position.PortfolioName).ThenByDescending(position => position.MarketValue).ToList(),
+            history);
     }
+
+    private static IReadOnlyList<PortfolioSummaryDto> BuildPortfolioSummaries(
+        IReadOnlyList<Portfolio> portfolios,
+        IReadOnlyList<Contracts.Positions.PositionDto> positions,
+        decimal totalMarketValue)
+    {
+        var positionsByPortfolio = positions
+            .GroupBy(position => position.PortfolioId)
+            .ToDictionary(group => group.Key);
+
+        return portfolios
+            .OrderBy(portfolio => portfolio.Name)
+            .Select(portfolio =>
+            {
+                positionsByPortfolio.TryGetValue(portfolio.Id, out var portfolioPositions);
+                var marketValue = portfolioPositions?.Sum(position => position.MarketValue) ?? 0m;
+                var invested = portfolioPositions?.Sum(position => position.InvestedAmount) ?? 0m;
+                var gain = portfolioPositions?.Sum(position => position.UnrealizedGain) ?? 0m;
+                var actualWeight = totalMarketValue > 0m ? Round(marketValue / totalMarketValue) : 0m;
+                var targetWeight = Round(portfolio.TargetWeight);
+
+                return new PortfolioSummaryDto(
+                    portfolio.Id,
+                    portfolio.Name,
+                    Round(marketValue),
+                    Round(invested),
+                    Round(gain),
+                    invested > 0m ? Round(gain / invested) : 0m,
+                    targetWeight,
+                    actualWeight,
+                    targetWeight > 0m ? Round(actualWeight - targetWeight) : 0m);
+            })
+            .ToList();
+    }
+
+    private IReadOnlyList<DashboardHistoryPointDto> BuildHistory(
+        IReadOnlyList<Portfolio> portfolios,
+        IReadOnlyList<Asset> assets,
+        IReadOnlyList<Transaction> transactions,
+        IReadOnlyList<AssetPrice> prices,
+        IReadOnlyList<AllocationRule> allocationRules)
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var dates = transactions
+            .Select(transaction => transaction.Date)
+            .Concat(prices.Select(price => price.Date))
+            .Append(today)
+            .Distinct()
+            .OrderBy(date => date)
+            .ToList();
+
+        if (dates.Count > 120)
+        {
+            dates = dates.Take(1).Concat(dates.TakeLast(119)).ToList();
+        }
+
+        return dates
+            .Select(date =>
+            {
+                var positions = positionCalculator.Calculate(
+                    portfolios,
+                    assets,
+                    transactions.Where(transaction => transaction.Date <= date).ToList(),
+                    prices.Where(price => price.Date <= date).ToList(),
+                    allocationRules);
+
+                var positionsByPortfolio = positions
+                    .GroupBy(position => position.PortfolioId)
+                    .ToDictionary(group => group.Key);
+
+                var portfolioPoints = portfolios
+                    .OrderBy(portfolio => portfolio.Name)
+                    .Select(portfolio =>
+                    {
+                        positionsByPortfolio.TryGetValue(portfolio.Id, out var portfolioPositions);
+                        var marketValue = portfolioPositions?.Sum(position => position.MarketValue) ?? 0m;
+                        var invested = portfolioPositions?.Sum(position => position.InvestedAmount) ?? 0m;
+                        var gain = portfolioPositions?.Sum(position => position.UnrealizedGain) ?? 0m;
+
+                        return new PortfolioHistoryPointDto(
+                            portfolio.Id,
+                            portfolio.Name,
+                            Round(marketValue),
+                            Round(invested),
+                            Round(gain));
+                    })
+                    .ToList();
+
+                var totalMarketValue = portfolioPoints.Sum(point => point.MarketValue);
+                var totalInvested = portfolioPoints.Sum(point => point.InvestedAmount);
+
+                return new DashboardHistoryPointDto(
+                    date,
+                    Round(totalMarketValue),
+                    Round(totalInvested),
+                    Round(totalMarketValue - totalInvested),
+                    portfolioPoints);
+            })
+            .ToList();
+    }
+
+    private static decimal Round(decimal value, int decimals = 4) =>
+        decimal.Round(value, decimals, MidpointRounding.AwayFromZero);
 }

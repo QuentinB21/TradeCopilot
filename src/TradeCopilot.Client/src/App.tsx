@@ -1,22 +1,20 @@
-import { BarChart3, BrainCircuit, BriefcaseBusiness, Coins, LineChart, ReceiptText, ShieldCheck } from "lucide-react";
+import { BarChart3, BrainCircuit, BriefcaseBusiness, LineChart, ReceiptText, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { AppShell, type NavigationItem } from "./components/AppShell";
 import { AssetsPage } from "./pages/AssetsPage";
 import { AssistantPage } from "./pages/AssistantPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { PortfoliosPage } from "./pages/PortfoliosPage";
-import { PricesPage } from "./pages/PricesPage";
 import { StrategyPage } from "./pages/StrategyPage";
 import { TransactionsPage } from "./pages/TransactionsPage";
 
-type ViewKey = "dashboard" | "portfolios" | "assets" | "transactions" | "prices" | "assistant" | "strategy";
+type ViewKey = "dashboard" | "portfolios" | "assets" | "transactions" | "assistant" | "strategy";
 
 const navigation: NavigationItem<ViewKey>[] = [
   { key: "dashboard", label: "Dashboard", icon: BarChart3 },
   { key: "portfolios", label: "Portefeuilles", icon: BriefcaseBusiness },
   { key: "assets", label: "Actifs", icon: LineChart },
   { key: "transactions", label: "Transactions", icon: ReceiptText },
-  { key: "prices", label: "Prix", icon: Coins },
   { key: "assistant", label: "Assistant", icon: BrainCircuit },
   { key: "strategy", label: "Strategie", icon: ShieldCheck }
 ];
@@ -30,7 +28,6 @@ export function App() {
       {activeView === "portfolios" ? <PortfoliosPage /> : null}
       {activeView === "assets" ? <AssetsPage /> : null}
       {activeView === "transactions" ? <TransactionsPage /> : null}
-      {activeView === "prices" ? <PricesPage /> : null}
       {activeView === "assistant" ? <AssistantPage /> : null}
       {activeView === "strategy" ? <StrategyPage /> : null}
     </AppShell>

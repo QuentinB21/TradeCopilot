@@ -1,9 +1,7 @@
 import { deleteJson, getJson, postForm, postJson, putJson } from "./client";
 import type {
   Asset,
-  AssetPrice,
   CreateAssetPayload,
-  CreateAssetPricePayload,
   CreateAllocationRulePayload,
   CreatePortfolioPayload,
   CreateStrategyRulePayload,
@@ -21,7 +19,6 @@ import type {
   TransactionImportProvider,
   TransactionImportResult,
   UpdateAllocationRulePayload,
-  UpdateAssetPricePayload,
   UpdateTransactionPayload
 } from "../domain/types";
 
@@ -49,10 +46,6 @@ export const tradeCopilotApi = {
     body.append("file", file);
     return postForm<TransactionImportResult>("/api/transaction-imports", body);
   },
-  getPrices: () => getJson<AssetPrice[]>("/api/prices"),
-  createPrice: (payload: CreateAssetPricePayload) => postJson<AssetPrice>("/api/prices", payload),
-  updatePrice: (id: string, payload: UpdateAssetPricePayload) => putJson<AssetPrice>(`/api/prices/${id}`, payload),
-  deletePrice: (id: string) => deleteJson(`/api/prices/${id}`),
   getAllocationRules: () => getJson<AllocationRule[]>("/api/allocation-rules"),
   createAllocationRule: (payload: CreateAllocationRulePayload) => postJson<AllocationRule>("/api/allocation-rules", payload),
   updateAllocationRule: (id: string, payload: UpdateAllocationRulePayload) => putJson<AllocationRule>(`/api/allocation-rules/${id}`, payload),

@@ -6,4 +6,7 @@ public sealed record PortfolioSummaryDto(
     decimal MarketValue,
     decimal InvestedAmount,
     decimal UnrealizedGain,
-    decimal UnrealizedGainPercent);
+    decimal UnrealizedGainPercent,
+    decimal TargetWeight,
+    decimal ActualWeight,
+    decimal AllocationDrift);

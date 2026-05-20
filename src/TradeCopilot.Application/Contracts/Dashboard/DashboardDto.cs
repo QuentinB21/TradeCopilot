@@ -8,4 +8,19 @@ public sealed record DashboardDto(
     decimal TotalUnrealizedGain,
     decimal TotalUnrealizedGainPercent,
     IReadOnlyList<PortfolioSummaryDto> Portfolios,
-    IReadOnlyList<PositionDto> Positions);
+    IReadOnlyList<PositionDto> Positions,
+    IReadOnlyList<DashboardHistoryPointDto> History);
+
+public sealed record DashboardHistoryPointDto(
+    DateOnly Date,
+    decimal TotalMarketValue,
+    decimal TotalInvested,
+    decimal TotalUnrealizedGain,
+    IReadOnlyList<PortfolioHistoryPointDto> Portfolios);
+
+public sealed record PortfolioHistoryPointDto(
+    Guid PortfolioId,
+    string PortfolioName,
+    decimal MarketValue,
+    decimal InvestedAmount,
+    decimal UnrealizedGain);

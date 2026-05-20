@@ -12,4 +12,5 @@ public sealed class AssetPrice
     public decimal Close { get; set; }
     public required string Currency { get; set; }
     public required string Source { get; set; }
+    public DateTimeOffset RetrievedAt { get; set; } = DateTimeOffset.UtcNow;
 }

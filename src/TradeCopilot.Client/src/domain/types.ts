@@ -39,7 +39,7 @@ export type Transaction = {
   externalId: string | null;
 };
 
-export type TransactionImportProvider = "TradeRepublic";
+export type TransactionImportProvider = "TradeRepublic" | "Boursobank";
 
 export type TransactionImportResult = {
   rowsRead: number;
@@ -53,18 +53,6 @@ export type TransactionImportResult = {
     message: string;
     recommendation: string;
   }[];
-};
-
-export type AssetPrice = {
-  id: string;
-  assetId: string;
-  date: string;
-  open: number | null;
-  high: number | null;
-  low: number | null;
-  close: number;
-  currency: string;
-  source: string;
 };
 
 export type InstrumentSearchResult = {
@@ -102,6 +90,7 @@ export type Position = {
   averageBuyPrice: number;
   investedAmount: number;
   marketPrice: number;
+  hasMarketPrice: boolean;
   marketValue: number;
   unrealizedGain: number;
   unrealizedGainPercent: number;
@@ -118,6 +107,25 @@ export type PortfolioSummary = {
   investedAmount: number;
   unrealizedGain: number;
   unrealizedGainPercent: number;
+  targetWeight: number;
+  actualWeight: number;
+  allocationDrift: number;
+};
+
+export type PortfolioHistoryPoint = {
+  portfolioId: string;
+  portfolioName: string;
+  marketValue: number;
+  investedAmount: number;
+  unrealizedGain: number;
+};
+
+export type DashboardHistoryPoint = {
+  date: string;
+  totalMarketValue: number;
+  totalInvested: number;
+  totalUnrealizedGain: number;
+  portfolios: PortfolioHistoryPoint[];
 };
 
 export type Dashboard = {
@@ -127,6 +135,7 @@ export type Dashboard = {
   totalUnrealizedGainPercent: number;
   portfolios: PortfolioSummary[];
   positions: Position[];
+  history: DashboardHistoryPoint[];
 };
 
 export type MonthlyInvestmentPlan = {
@@ -180,9 +189,7 @@ export type Strategy = {
 export type CreatePortfolioPayload = Omit<Portfolio, "id">;
 export type CreateAssetPayload = Omit<Asset, "id"> & { country: string | null; priceProvider: string | null };
 export type CreateTransactionPayload = Omit<Transaction, "id" | "importSource" | "externalId">;
-export type CreateAssetPricePayload = Omit<AssetPrice, "id">;
 export type UpdateTransactionPayload = Omit<Transaction, "id" | "importSource" | "externalId">;
-export type UpdateAssetPricePayload = Omit<AssetPrice, "id">;
 export type CreateAllocationRulePayload = Omit<AllocationRule, "id">;
 export type UpdateAllocationRulePayload = Omit<AllocationRule, "id" | "portfolioId" | "assetId">;
 export type CreateStrategyRulePayload = Omit<StrategyRule, "id">;

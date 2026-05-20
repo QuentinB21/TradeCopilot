@@ -9,4 +9,5 @@ public sealed record AssetPriceDto(
     decimal? Low,
     decimal Close,
     string Currency,
-    string Source);
+    string Source,
+    DateTimeOffset RetrievedAt);

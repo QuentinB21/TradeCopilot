@@ -73,7 +73,9 @@ public sealed class PositionCalculator
                 continue;
             }
 
-            var marketPrice = latestPriceByAssetId.TryGetValue(asset.Id, out var latestPrice) ? latestPrice.Close : 0m;
+            var averageBuyPrice = costBasis / quantity;
+            var hasMarketPrice = latestPriceByAssetId.TryGetValue(asset.Id, out var latestPrice);
+            var marketPrice = hasMarketPrice ? latestPrice!.Close : averageBuyPrice;
             rawPositions.Add(new PositionAccumulator(
                 portfolio,
                 asset,
@@ -81,7 +83,8 @@ public sealed class PositionCalculator
                 costBasis,
                 marketPrice,
                 quantity * marketPrice,
-                (costBasis / quantity),
+                averageBuyPrice,
+                hasMarketPrice,
                 realizedGain));
         }
 
@@ -111,6 +114,7 @@ public sealed class PositionCalculator
                 DecimalRound(position.AverageBuyPrice),
                 DecimalRound(position.CostBasis),
                 DecimalRound(position.MarketPrice),
+                position.HasMarketPrice,
                 DecimalRound(position.MarketValue),
                 DecimalRound(unrealizedGain),
                 position.CostBasis > 0m ? DecimalRound(unrealizedGain / position.CostBasis) : 0m,
@@ -132,5 +136,6 @@ public sealed class PositionCalculator
         decimal MarketPrice,
         decimal MarketValue,
         decimal AverageBuyPrice,
+        bool HasMarketPrice,
         decimal RealizedGain);
 }

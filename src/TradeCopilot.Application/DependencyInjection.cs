@@ -29,10 +29,12 @@ public static class DependencyInjection
         services.AddScoped<IDashboardQueryService, DashboardQueryService>();
         services.AddScoped<IInvestmentPlanService, InvestmentPlanService>();
         services.AddScoped<IMarketDataService, MarketDataService>();
+        services.AddScoped<IMarketPriceRefreshService, MarketPriceRefreshService>();
         services.AddScoped<IStrategyService, StrategyService>();
         services.AddScoped<IStrategyRuleService, StrategyRuleService>();
         services.AddScoped<ITransactionImportService, TransactionImportService>();
         services.AddScoped<ITransactionImportStrategy, TradeRepublicTransactionImportStrategy>();
+        services.AddScoped<ITransactionImportStrategy, BoursobankTransactionImportStrategy>();
 
         return services;
     }

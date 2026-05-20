@@ -159,7 +159,7 @@ export function TransactionsPage() {
   const importTransactions = useMutation({
     mutationFn: () => {
       if (!importFile) {
-        throw new Error("Selectionnez un fichier CSV.");
+        throw new Error("Selectionnez un fichier CSV ou Excel.");
       }
 
       return tradeCopilotApi.importTransactions(importProvider, importPortfolioId, importFile);
@@ -177,11 +177,11 @@ export function TransactionsPage() {
     <>
       <PageHeader title="Positions et transactions" description="Saisie des positions d'ouverture, achats, ventes, versements, dividendes et frais." />
       <section className="grid">
-        <Panel title="Importer un CSV" subtitle="Le format est choisi explicitement pour pouvoir ajouter d'autres banques ensuite.">
+        <Panel title="Importer des transactions" subtitle="Le format est choisi explicitement pour pouvoir ajouter d'autres banques ensuite.">
           <form className="form" onSubmit={(event) => { event.preventDefault(); importTransactions.mutate(); }}>
-            <label>Provenance<select value={importProvider} onChange={(event) => setImportProvider(event.target.value as TransactionImportProvider)}><option value="TradeRepublic">Trade Republic</option></select></label>
+            <label>Provenance<select value={importProvider} onChange={(event) => setImportProvider(event.target.value as TransactionImportProvider)}><option value="TradeRepublic">Trade Republic</option><option value="Boursobank">Boursobank</option></select></label>
             <label>Portefeuille cible<select value={importPortfolioId} onChange={(event) => setImportPortfolioId(event.target.value)} required><option value="">Selectionner</option>{(portfoliosQuery.data ?? []).map((portfolio) => <option value={portfolio.id} key={portfolio.id}>{portfolio.name}</option>)}</select></label>
-            <label>Fichier CSV<input type="file" accept=".csv,text/csv" onChange={(event) => setImportFile(event.target.files?.[0] ?? null)} required /></label>
+            <label>Fichier<input type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(event) => setImportFile(event.target.files?.[0] ?? null)} required /></label>
             <button type="submit" disabled={!importPortfolioId || !importFile || importTransactions.isPending}>Importer les transactions</button>
           </form>
           {importTransactions.data ? (
