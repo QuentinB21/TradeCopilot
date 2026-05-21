@@ -29,7 +29,7 @@ public sealed class MarketPriceRefreshService(
             .ToDictionary(group => group.Key, group => group.OrderByDescending(price => price.RetrievedAt).ThenByDescending(price => price.Date).First());
 
         var refreshableAssetIds = assets
-            .Where(asset => asset.Type is AssetType.Stock or AssetType.Etf)
+            .Where(IsRefreshable)
             .Select(asset => asset.Id)
             .ToHashSet();
 
@@ -37,7 +37,7 @@ public sealed class MarketPriceRefreshService(
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (string.IsNullOrWhiteSpace(asset.Symbol))
+            if (string.IsNullOrWhiteSpace(asset.Symbol) && string.IsNullOrWhiteSpace(asset.MarketSymbol))
             {
                 continue;
             }
@@ -99,7 +99,8 @@ public sealed class MarketPriceRefreshService(
 
     private async Task<NormalizedMarketQuote?> GetNormalizedQuoteAsync(Asset asset, string targetCurrency, CancellationToken cancellationToken)
     {
-        var directQuote = await marketDataProvider.GetLatestQuoteAsync(asset.Symbol, cancellationToken);
+        var quoteSymbol = string.IsNullOrWhiteSpace(asset.MarketSymbol) ? asset.Symbol : asset.MarketSymbol;
+        var directQuote = await marketDataProvider.GetLatestQuoteAsync(quoteSymbol, cancellationToken);
         if (directQuote is not null)
         {
             return await NormalizeQuoteAsync(asset, directQuote, targetCurrency, cancellationToken);
@@ -142,7 +143,7 @@ public sealed class MarketPriceRefreshService(
         var low = quote.Low;
         var close = quote.Close;
 
-        if (asset.Symbol.EndsWith(".L", StringComparison.OrdinalIgnoreCase)
+        if (quote.Symbol.EndsWith(".L", StringComparison.OrdinalIgnoreCase)
             && quoteCurrency == "GBP"
             && close > 100m)
         {
@@ -225,6 +226,10 @@ public sealed class MarketPriceRefreshService(
 
         return transactionCurrency ?? asset.Currency.Trim().ToUpperInvariant();
     }
+
+    private static bool IsRefreshable(Asset asset) =>
+        asset.Type is AssetType.Stock or AssetType.Etf
+        || asset.Type is not AssetType.Cash && !string.IsNullOrWhiteSpace(asset.MarketSymbol);
 
     private static decimal? Round(decimal? value) =>
         value.HasValue ? decimal.Round(value.Value, 6, MidpointRounding.AwayFromZero) : null;

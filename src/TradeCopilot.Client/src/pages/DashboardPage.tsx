@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { tradeCopilotApi } from "../api/tradeCopilotApi";
 import { Metric } from "../components/Metric";
+import { MarketBindingPanel } from "../components/MarketBindingPanel";
 import { PageHeader } from "../components/PageHeader";
 import { Panel } from "../components/Panel";
 import { QueryState } from "../components/QueryState";
@@ -35,7 +36,8 @@ function DashboardContent({ dashboard }: { dashboard: Dashboard }) {
     () => [...dashboard.positions].sort((a, b) => b.marketValue - a.marketValue).slice(0, 8),
     [dashboard.positions]
   );
-  const missingPriceCount = dashboard.positions.filter((position) => !position.hasMarketPrice).length;
+  const missingPricePositions = dashboard.positions.filter((position) => !position.hasMarketPrice);
+  const missingPriceCount = missingPricePositions.length;
 
   if (dashboard.portfolios.length === 0) {
     return (
@@ -72,6 +74,12 @@ function DashboardContent({ dashboard }: { dashboard: Dashboard }) {
           <DashboardWatchlist positions={dashboard.positions} missingPriceCount={missingPriceCount} />
         </Panel>
       </section>
+
+      {missingPricePositions.length > 0 ? (
+        <Panel title="Cours a lier" subtitle="Associer manuellement les actifs qui ne trouvent pas leur cotation automatiquement." className="bindingPanel">
+          <MarketBindingPanel assets={missingPricePositions} />
+        </Panel>
+      ) : null}
 
       <section className="grid dashboardGrid">
         <Panel title="Objectifs par portefeuille" subtitle="Poids reel vs cle cible">
@@ -219,8 +227,8 @@ function LineObjectiveProgress({ positions }: { positions: Position[] }) {
       {tracked.map((position) => (
         <ObjectiveRow
           key={`${position.portfolioId}-${position.assetId}`}
-          label={position.symbol}
-          detail={position.portfolioName}
+          label={position.assetName}
+          detail={`${position.portfolioName} - ${position.symbol}`}
           actual={position.weight}
           target={position.targetWeight ?? 0}
           drift={position.allocationDrift ?? 0}
@@ -298,8 +306,8 @@ function DashboardWatchlist({ positions, missingPriceCount }: { positions: Posit
       </div>
       {driftedPositions.map((position) => (
         <div className="watchItem" key={`${position.portfolioId}-${position.assetId}`}>
-          <strong>{position.symbol}</strong>
-          <span>{position.portfolioName} - ecart {formatPercent(position.allocationDrift ?? 0)} vs cible.</span>
+          <strong>{position.assetName}</strong>
+          <span>{position.symbol} - {position.portfolioName} - ecart {formatPercent(position.allocationDrift ?? 0)} vs cible.</span>
         </div>
       ))}
       {driftedPositions.length === 0 ? <p className="emptyState">Les ecarts apparaitront apres configuration des cles par ligne.</p> : null}

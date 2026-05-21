@@ -10,4 +10,6 @@ public sealed record AssetDto(
     AssetType Type,
     string Currency,
     string? Sector,
+    string? PriceProvider,
+    string? MarketSymbol,
     StrategicStatus StrategicStatus);

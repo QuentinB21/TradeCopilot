@@ -21,6 +21,8 @@ export type Asset = {
   type: AssetType;
   currency: string;
   sector: string | null;
+  priceProvider: string | null;
+  marketSymbol: string | null;
   strategicStatus: StrategicStatus;
 };
 
@@ -187,7 +189,7 @@ export type Strategy = {
 };
 
 export type CreatePortfolioPayload = Omit<Portfolio, "id">;
-export type CreateAssetPayload = Omit<Asset, "id"> & { country: string | null; priceProvider: string | null };
+export type CreateAssetPayload = Omit<Asset, "id"> & { country: string | null };
 export type CreateTransactionPayload = Omit<Transaction, "id" | "importSource" | "externalId">;
 export type UpdateTransactionPayload = Omit<Transaction, "id" | "importSource" | "externalId">;
 export type CreateAllocationRulePayload = Omit<AllocationRule, "id">;

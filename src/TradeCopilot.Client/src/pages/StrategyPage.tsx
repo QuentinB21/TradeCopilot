@@ -43,6 +43,7 @@ const emptyAsset: CreateAssetPayload = {
   sector: "",
   country: "",
   priceProvider: "manual",
+  marketSymbol: null,
   strategicStatus: "Conviction"
 };
 
@@ -133,7 +134,8 @@ export function StrategyPage() {
       currency: asset.currency,
       sector: asset.sector,
       country: null,
-      priceProvider: null,
+      priceProvider: asset.priceProvider,
+      marketSymbol: asset.marketSymbol,
       strategicStatus: asset.strategicStatus
     });
   };
@@ -318,7 +320,7 @@ export function StrategyPage() {
             <div className="compactList">
               {assets.map((asset) => (
                 <div className="compactRow" key={asset.id}>
-                  <div><strong>{asset.symbol}</strong><span>{asset.name} - {asset.strategicStatus}</span></div>
+                  <div><strong>{asset.name}</strong><span>{asset.symbol} - {asset.strategicStatus}</span></div>
                   <div className="rowActions">
                     <button className="linkButton" type="button" onClick={() => editAsset(asset)}>Modifier</button>
                     <button className="linkButton dangerText" type="button" onClick={() => deleteAsset.mutate(asset.id)}>Supprimer</button>
@@ -332,7 +334,7 @@ export function StrategyPage() {
         <Panel className="strategyPanel" title="Cles par ligne" subtitle="Ponderation dans chaque portefeuille">
           <form className="form" onSubmit={(event) => { event.preventDefault(); saveAllocationRule.mutate(); }}>
             <label>Portefeuille<select value={allocationForm.portfolioId} onChange={(event) => setAllocationForm({ ...allocationForm, portfolioId: event.target.value })} required disabled={Boolean(editingAllocationRuleId)}><option value="">Selectionner</option>{portfolios.map((portfolio) => <option value={portfolio.id} key={portfolio.id}>{portfolio.name}</option>)}</select></label>
-            <label>Actif<select value={allocationForm.assetId} onChange={(event) => setAllocationForm({ ...allocationForm, assetId: event.target.value })} required disabled={Boolean(editingAllocationRuleId)}><option value="">Selectionner</option>{assets.map((asset) => <option value={asset.id} key={asset.id}>{asset.symbol} - {asset.name}</option>)}</select></label>
+            <label>Actif<select value={allocationForm.assetId} onChange={(event) => setAllocationForm({ ...allocationForm, assetId: event.target.value })} required disabled={Boolean(editingAllocationRuleId)}><option value="">Selectionner</option>{assets.map((asset) => <option value={asset.id} key={asset.id}>{asset.name} - {asset.symbol}</option>)}</select></label>
             <label>Cle<DecimalInput min={0} max={1} step="0.01" value={allocationForm.targetWeight} onChange={(value) => setAllocationForm({ ...allocationForm, targetWeight: value })} /></label>
             <label>Statut<select value={allocationForm.status} onChange={(event) => setAllocationForm({ ...allocationForm, status: event.target.value as CreateAllocationRulePayload["status"] })}>{allocationRuleStatuses.map((status) => <option key={status}>{status}</option>)}</select></label>
             <div className="formActions">
@@ -346,8 +348,8 @@ export function StrategyPage() {
               {(allocationRulesQuery.data ?? []).map((rule) => (
                 <div className="compactRow" key={rule.id}>
                   <div>
-                    <strong>{assetById.get(rule.assetId)?.symbol ?? "Actif"}</strong>
-                    <span>{portfolioById.get(rule.portfolioId)?.name ?? "Portefeuille"} - {formatPercent(rule.targetWeight)} - {rule.status}</span>
+                    <strong>{assetById.get(rule.assetId)?.name ?? "Actif"}</strong>
+                    <span>{assetById.get(rule.assetId)?.name ?? "Actif"} - {assetById.get(rule.assetId)?.symbol ?? "Symbole"} - {portfolioById.get(rule.portfolioId)?.name ?? "Portefeuille"} - {formatPercent(rule.targetWeight)} - {rule.status}</span>
                   </div>
                   <div className="rowActions">
                     <button className="linkButton" type="button" onClick={() => editAllocationRule(rule)}>Modifier</button>
@@ -364,7 +366,7 @@ export function StrategyPage() {
             <label>Nom<input value={strategyRuleForm.name} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, name: event.target.value })} required /></label>
             <label>Description<input value={strategyRuleForm.description} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, description: event.target.value })} required /></label>
             <label>Portefeuille<select value={strategyRuleForm.portfolioId ?? ""} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, portfolioId: event.target.value || null })}><option value="">Tous</option>{portfolios.map((portfolio) => <option value={portfolio.id} key={portfolio.id}>{portfolio.name}</option>)}</select></label>
-            <label>Actif<select value={strategyRuleForm.assetId ?? ""} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, assetId: event.target.value || null })}><option value="">Tous</option>{assets.map((asset) => <option value={asset.id} key={asset.id}>{asset.symbol} - {asset.name}</option>)}</select></label>
+            <label>Actif<select value={strategyRuleForm.assetId ?? ""} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, assetId: event.target.value || null })}><option value="">Tous</option>{assets.map((asset) => <option value={asset.id} key={asset.id}>{asset.name} - {asset.symbol}</option>)}</select></label>
             <label>Condition<input value={strategyRuleForm.triggerCondition ?? ""} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, triggerCondition: event.target.value || null })} /></label>
             <label>Action recommandee<input value={strategyRuleForm.recommendedAction} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, recommendedAction: event.target.value })} required /></label>
             <label>Priorite<DecimalInput value={strategyRuleForm.priority} onChange={(value) => setStrategyRuleForm({ ...strategyRuleForm, priority: value })} /></label>
@@ -381,7 +383,7 @@ export function StrategyPage() {
                   <div>
                     <strong>{rule.name}</strong>
                     <span>{rule.recommendedAction}</span>
-                    <span>{rule.portfolioId ? portfolioById.get(rule.portfolioId)?.name : "Tous portefeuilles"} - {rule.assetId ? assetById.get(rule.assetId)?.symbol : "Tous actifs"}</span>
+                    <span>{rule.portfolioId ? portfolioById.get(rule.portfolioId)?.name : "Tous portefeuilles"} - {rule.assetId ? assetById.get(rule.assetId)?.name : "Tous actifs"}</span>
                   </div>
                   <div className="rowActions">
                     <button className="linkButton" type="button" onClick={() => editStrategyRule(rule)}>Modifier</button>

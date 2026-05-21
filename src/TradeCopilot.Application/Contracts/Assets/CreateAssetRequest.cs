@@ -11,4 +11,5 @@ public sealed record CreateAssetRequest(
     string? Sector,
     string? Country,
     string? PriceProvider,
+    string? MarketSymbol,
     StrategicStatus StrategicStatus);

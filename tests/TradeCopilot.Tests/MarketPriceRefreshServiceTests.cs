@@ -117,6 +117,82 @@ public sealed class MarketPriceRefreshServiceTests
         Assert.Equal(1, provider.SearchCalls);
     }
 
+    [Fact]
+    public async Task Uses_bound_market_symbol_before_display_symbol()
+    {
+        var assetId = Guid.NewGuid();
+        var asset = new Asset
+        {
+            Id = assetId,
+            Name = "Microsoft",
+            Symbol = "US5949181045",
+            Isin = "US5949181045",
+            MarketSymbol = "MSFT",
+            Type = AssetType.Stock,
+            Currency = "EUR",
+            StrategicStatus = StrategicStatus.Core
+        };
+        var provider = new FakeMarketDataProvider(
+            quote: null,
+            quotesBySymbol: new Dictionary<string, MarketQuoteDto>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["MSFT"] = new(
+                    "MSFT",
+                    new DateOnly(2026, 5, 21),
+                    420m,
+                    430m,
+                    410m,
+                    425m,
+                    "EUR",
+                    "test-provider",
+                    DateTimeOffset.UtcNow)
+            });
+
+        var prices = await new MarketPriceRefreshService(new FakeInvestmentRepository(), provider)
+            .RefreshCurrentPricesAsync([asset], [Buy(assetId)], []);
+
+        Assert.Equal(425m, Assert.Single(prices).Close);
+        Assert.Equal(1, provider.Calls);
+        Assert.Equal(0, provider.SearchCalls);
+    }
+
+    [Fact]
+    public async Task Refreshes_bound_non_cash_asset()
+    {
+        var assetId = Guid.NewGuid();
+        var asset = new Asset
+        {
+            Id = assetId,
+            Name = "Bitcoin",
+            Symbol = "BTC",
+            MarketSymbol = "BTC-EUR",
+            Type = AssetType.Other,
+            Currency = "EUR",
+            StrategicStatus = StrategicStatus.Observation
+        };
+        var provider = new FakeMarketDataProvider(
+            quote: null,
+            quotesBySymbol: new Dictionary<string, MarketQuoteDto>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["BTC-EUR"] = new(
+                    "BTC-EUR",
+                    new DateOnly(2026, 5, 21),
+                    90000m,
+                    92000m,
+                    89000m,
+                    91000m,
+                    "EUR",
+                    "test-provider",
+                    DateTimeOffset.UtcNow)
+            });
+
+        var prices = await new MarketPriceRefreshService(new FakeInvestmentRepository(), provider)
+            .RefreshCurrentPricesAsync([asset], [Buy(assetId)], []);
+
+        Assert.Equal(91000m, Assert.Single(prices).Close);
+        Assert.Equal(1, provider.Calls);
+    }
+
     private static Transaction Buy(Guid assetId) => new()
     {
         PortfolioId = Guid.NewGuid(),

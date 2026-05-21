@@ -43,8 +43,8 @@ export function AssistantPage() {
                   {envelope.lines.map((line) => (
                     <div className="compactRow" key={line.assetId}>
                       <div>
-                        <strong>{line.symbol}</strong>
-                        <span>{line.assetName}</span>
+                        <strong>{line.assetName}</strong>
+                        <span>{line.symbol}</span>
                       </div>
                       <div className="rightText">
                         <strong>{formatCurrency(line.amount)}</strong>

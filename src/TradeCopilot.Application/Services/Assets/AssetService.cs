@@ -11,7 +11,8 @@ public sealed class AssetService(IInvestmentRepository repository) : IAssetServi
     {
         var assets = await repository.GetAssetsAsync(cancellationToken);
         return assets
-            .OrderBy(asset => asset.Symbol)
+            .OrderBy(asset => asset.Name)
+            .ThenBy(asset => asset.Symbol)
             .Select(ToDto)
             .ToList();
     }
@@ -38,6 +39,7 @@ public sealed class AssetService(IInvestmentRepository repository) : IAssetServi
             Sector = request.Sector?.Trim(),
             Country = request.Country?.Trim(),
             PriceProvider = request.PriceProvider?.Trim(),
+            MarketSymbol = NormalizeMarketSymbol(request.MarketSymbol),
             StrategicStatus = request.StrategicStatus
         };
 
@@ -65,7 +67,25 @@ public sealed class AssetService(IInvestmentRepository repository) : IAssetServi
         asset.Sector = request.Sector?.Trim();
         asset.Country = request.Country?.Trim();
         asset.PriceProvider = request.PriceProvider?.Trim();
+        asset.MarketSymbol = NormalizeMarketSymbol(request.MarketSymbol);
         asset.StrategicStatus = request.StrategicStatus;
+
+        await repository.UpdateAssetAsync(asset, cancellationToken);
+        return ToDto(asset);
+    }
+
+    public async Task<AssetDto?> BindMarketInstrumentAsync(Guid id, BindMarketInstrumentRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.MarketSymbol);
+
+        var asset = await repository.GetAssetByIdAsync(id, cancellationToken);
+        if (asset is null)
+        {
+            return null;
+        }
+
+        asset.MarketSymbol = NormalizeMarketSymbol(request.MarketSymbol);
+        asset.PriceProvider = string.IsNullOrWhiteSpace(request.PriceProvider) ? asset.PriceProvider : request.PriceProvider.Trim();
 
         await repository.UpdateAssetAsync(asset, cancellationToken);
         return ToDto(asset);
@@ -96,5 +116,10 @@ public sealed class AssetService(IInvestmentRepository repository) : IAssetServi
         asset.Type,
         asset.Currency,
         asset.Sector,
+        asset.PriceProvider,
+        asset.MarketSymbol,
         asset.StrategicStatus);
+
+    private static string? NormalizeMarketSymbol(string? marketSymbol) =>
+        string.IsNullOrWhiteSpace(marketSymbol) ? null : marketSymbol.Trim().ToUpperInvariant();
 }

@@ -16,6 +16,7 @@ const emptyAsset: CreateAssetPayload = {
   sector: "",
   country: "",
   priceProvider: "manual",
+  marketSymbol: null,
   strategicStatus: "Conviction"
 };
 
@@ -49,7 +50,8 @@ export function AssetsPage() {
         type: instrument.suggestedType,
         currency,
         sector: instrument.sector,
-        priceProvider: instrument.provider
+        priceProvider: instrument.provider,
+        marketSymbol: instrument.symbol
       });
     }
   });
@@ -76,7 +78,8 @@ export function AssetsPage() {
       currency: asset.currency,
       sector: asset.sector,
       country: "",
-      priceProvider: "manual",
+      priceProvider: asset.priceProvider,
+      marketSymbol: asset.marketSymbol,
       strategicStatus: asset.strategicStatus
     });
   }
@@ -98,8 +101,8 @@ export function AssetsPage() {
             <div className="searchResults">
               {searchResults.map((result) => (
                 <button type="button" key={`${result.provider}-${result.symbol}`} onClick={() => useInstrument.mutate(result)}>
-                  <strong>{result.symbol}</strong>
-                  <span>{result.name}</span>
+                  <strong>{result.name}</strong>
+                  <span>{result.symbol}</span>
                   <small>{result.exchangeDisplay ?? result.exchange ?? result.provider}</small>
                 </button>
               ))}
@@ -124,12 +127,12 @@ export function AssetsPage() {
           <QueryState isLoading={assetsQuery.isLoading} error={assetsQuery.error}>
             <div className="tableWrap compactTable">
               <table>
-                <thead><tr><th>Symbole</th><th>Nom</th><th>Type</th><th>Statut</th><th></th></tr></thead>
+                <thead><tr><th>Actif</th><th>Cotation liee</th><th>Type</th><th>Statut</th><th></th></tr></thead>
                 <tbody>
                   {(assetsQuery.data ?? []).map((asset) => (
                     <tr key={asset.id}>
-                      <td><strong>{asset.symbol}</strong></td>
-                      <td>{asset.name}</td>
+                      <td><strong>{asset.name}</strong><span>{asset.symbol}</span></td>
+                      <td>{asset.marketSymbol ? <><strong>{asset.marketSymbol}</strong><span>{asset.priceProvider ?? "Source auto"}</span></> : <span>A lier si le cours manque</span>}</td>
                       <td>{asset.type}</td>
                       <td><span className="status">{asset.strategicStatus}</span></td>
                       <td><button className="linkButton" onClick={() => edit(asset)} type="button">Modifier</button></td>

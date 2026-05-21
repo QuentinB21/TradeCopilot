@@ -34,6 +34,8 @@ export const tradeCopilotApi = {
   getAssets: () => getJson<Asset[]>("/api/assets"),
   createAsset: (payload: CreateAssetPayload) => postJson<Asset>("/api/assets", payload),
   updateAsset: (id: string, payload: CreateAssetPayload) => putJson<Asset>(`/api/assets/${id}`, payload),
+  bindMarketInstrument: (id: string, marketSymbol: string, priceProvider: string | null) =>
+    putJson<Asset>(`/api/assets/${id}/market-binding`, { marketSymbol, priceProvider }),
   deleteAsset: (id: string) => deleteJson(`/api/assets/${id}`),
   getTransactions: () => getJson<Transaction[]>("/api/transactions"),
   createTransaction: (payload: CreateTransactionPayload) => postJson<Transaction>("/api/transactions", payload),

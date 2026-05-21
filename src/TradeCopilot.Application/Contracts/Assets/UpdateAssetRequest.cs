@@ -11,4 +11,5 @@ public sealed record UpdateAssetRequest(
     string? Sector,
     string? Country,
     string? PriceProvider,
+    string? MarketSymbol,
     StrategicStatus StrategicStatus);

@@ -35,6 +35,7 @@ public sealed class TradeCopilotDbContext(DbContextOptions<TradeCopilotDbContext
             entity.Property(asset => asset.Sector).HasMaxLength(120);
             entity.Property(asset => asset.Country).HasMaxLength(120);
             entity.Property(asset => asset.PriceProvider).HasMaxLength(80);
+            entity.Property(asset => asset.MarketSymbol).HasMaxLength(48);
         });
 
         modelBuilder.Entity<Transaction>(entity =>

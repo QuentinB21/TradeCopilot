@@ -9,5 +9,6 @@ public interface IAssetService
     Task<AssetDto?> GetAssetAsync(Guid id, CancellationToken cancellationToken = default);
     Task<AssetDto> CreateAssetAsync(CreateAssetRequest request, CancellationToken cancellationToken = default);
     Task<AssetDto?> UpdateAssetAsync(Guid id, UpdateAssetRequest request, CancellationToken cancellationToken = default);
+    Task<AssetDto?> BindMarketInstrumentAsync(Guid id, BindMarketInstrumentRequest request, CancellationToken cancellationToken = default);
     Task<DeleteEntityResult> DeleteAssetAsync(Guid id, CancellationToken cancellationToken = default);
 }

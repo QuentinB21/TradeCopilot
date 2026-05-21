@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { FileUp } from "lucide-react";
+import { DragEvent, useMemo, useState } from "react";
 import { tradeCopilotApi } from "../api/tradeCopilotApi";
 import { DecimalInput } from "../components/DecimalInput";
 import { transactionTypes } from "../domain/options";
@@ -98,6 +99,7 @@ export function TransactionsPage() {
   const [importProvider, setImportProvider] = useState<TransactionImportProvider>("TradeRepublic");
   const [importPortfolioId, setImportPortfolioId] = useState("");
   const [importFile, setImportFile] = useState<File | null>(null);
+  const [isFileDragActive, setIsFileDragActive] = useState(false);
 
   const assetById = useMemo(() => new Map((assetsQuery.data ?? []).map((asset) => [asset.id, asset])), [assetsQuery.data]);
   const portfolioById = useMemo(() => new Map((portfoliosQuery.data ?? []).map((portfolio) => [portfolio.id, portfolio])), [portfoliosQuery.data]);
@@ -173,6 +175,12 @@ export function TransactionsPage() {
   const transactions = transactionsQuery.data ?? [];
   const importWarningGroups = groupWarnings(importTransactions.data?.warnings ?? []);
 
+  function useDroppedFile(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    setIsFileDragActive(false);
+    setImportFile(event.dataTransfer.files?.[0] ?? null);
+  }
+
   return (
     <>
       <PageHeader title="Transactions" description="Importer en priorite, corriger ensuite. Les saisies manuelles restent disponibles pour les cas incomplets." />
@@ -181,7 +189,25 @@ export function TransactionsPage() {
           <form className="form" onSubmit={(event) => { event.preventDefault(); importTransactions.mutate(); }}>
             <label>Provenance<select value={importProvider} onChange={(event) => setImportProvider(event.target.value as TransactionImportProvider)}><option value="TradeRepublic">Trade Republic</option><option value="Boursobank">Boursobank</option></select></label>
             <label>Portefeuille cible<select value={importPortfolioId} onChange={(event) => setImportPortfolioId(event.target.value)} required><option value="">Selectionner</option>{(portfoliosQuery.data ?? []).map((portfolio) => <option value={portfolio.id} key={portfolio.id}>{portfolio.name}</option>)}</select></label>
-            <label>Fichier<input type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(event) => setImportFile(event.target.files?.[0] ?? null)} required /></label>
+            <label
+              className={isFileDragActive ? "fileDropzone active" : "fileDropzone"}
+              onDragEnter={(event) => { event.preventDefault(); setIsFileDragActive(true); }}
+              onDragLeave={() => setIsFileDragActive(false)}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={useDroppedFile}
+            >
+              <span className="fileDropIcon"><FileUp size={38} strokeWidth={1.8} /></span>
+              <strong>{importFile ? importFile.name : "Glissez-deposez votre fichier CSV ou XLSX ici"}</strong>
+              <span className="fileDropSeparator">ou</span>
+              <span className="filePicker">{importFile ? "Remplacer" : "Parcourir"}</span>
+              <input
+                className="fileInput"
+                type="file"
+                accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                onChange={(event) => setImportFile(event.target.files?.[0] ?? null)}
+                required
+              />
+            </label>
             <button type="submit" disabled={!importPortfolioId || !importFile || importTransactions.isPending}>Importer les transactions</button>
           </form>
           {importTransactions.data ? (
@@ -212,7 +238,7 @@ export function TransactionsPage() {
         <Panel className="transactionEditorPanel" title={editingId ? "Modifier la transaction" : "Saisie manuelle"} subtitle="Pour une position deja detenue, saisir l'achat d'ouverture avec quantite et PRU.">
           <form className="form" onSubmit={(event) => { event.preventDefault(); saveTransaction.mutate(); }}>
             <label>Portefeuille<select value={form.portfolioId} onChange={(event) => setForm({ ...form, portfolioId: event.target.value })} required><option value="">Selectionner</option>{(portfoliosQuery.data ?? []).map((portfolio) => <option value={portfolio.id} key={portfolio.id}>{portfolio.name}</option>)}</select></label>
-            <label>Actif<select value={form.assetId ?? ""} onChange={(event) => setForm({ ...form, assetId: event.target.value })}><option value="">Aucun</option>{(assetsQuery.data ?? []).map((asset) => <option value={asset.id} key={asset.id}>{asset.symbol} - {asset.name}</option>)}</select></label>
+            <label>Actif<select value={form.assetId ?? ""} onChange={(event) => setForm({ ...form, assetId: event.target.value })}><option value="">Aucun</option>{(assetsQuery.data ?? []).map((asset) => <option value={asset.id} key={asset.id}>{asset.name} - {asset.symbol}</option>)}</select></label>
             <label>Type<select value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value as CreateTransactionPayload["type"] })}>{transactionTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
             <label>Date<input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} required /></label>
             <label>Quantite<DecimalInput step="0.000001" value={form.quantity} onChange={(value) => setForm({ ...form, quantity: value })} /></label>
@@ -242,7 +268,14 @@ export function TransactionsPage() {
                         <td>{transaction.date}</td>
                         <td>{transaction.type}</td>
                         <td>{portfolioById.get(transaction.portfolioId)?.name ?? "-"}</td>
-                        <td>{transaction.assetId ? assetById.get(transaction.assetId)?.symbol ?? "-" : "-"}</td>
+                        <td>
+                          {transaction.assetId ? (
+                            <>
+                              <strong>{assetById.get(transaction.assetId)?.name ?? "-"}</strong>
+                              <span>{assetById.get(transaction.assetId)?.symbol ?? "-"}</span>
+                            </>
+                          ) : "-"}
+                        </td>
                         <td>{transaction.quantity}</td>
                         <td>{formatCurrency(transaction.quantity * transaction.unitPrice + transaction.fees)}</td>
                         <td>

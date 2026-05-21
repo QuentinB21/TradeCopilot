@@ -32,6 +32,7 @@ public sealed class DatabaseInitializer(IServiceProvider serviceProvider) : IHos
             await dbContext.Database.ExecuteSqlRawAsync(
                 """
                 ALTER TABLE "Portfolios" ADD COLUMN IF NOT EXISTS "TargetWeight" numeric(9,6) NOT NULL DEFAULT 0;
+                ALTER TABLE "Assets" ADD COLUMN IF NOT EXISTS "MarketSymbol" character varying(48) NULL;
                 ALTER TABLE "AssetPrices" ADD COLUMN IF NOT EXISTS "RetrievedAt" timestamp with time zone NOT NULL DEFAULT TIMESTAMPTZ '1970-01-01 00:00:00+00';
                 ALTER TABLE "Transactions" ADD COLUMN IF NOT EXISTS "ImportSource" character varying(80) NULL;
                 ALTER TABLE "Transactions" ADD COLUMN IF NOT EXISTS "ExternalId" character varying(160) NULL;

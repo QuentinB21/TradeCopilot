@@ -11,6 +11,7 @@ public sealed class Asset
     public string? Sector { get; set; }
     public string? Country { get; set; }
     public string? PriceProvider { get; set; }
+    public string? MarketSymbol { get; set; }
     public StrategicStatus StrategicStatus { get; set; }
     public List<AssetPrice> Prices { get; set; } = [];
 }
