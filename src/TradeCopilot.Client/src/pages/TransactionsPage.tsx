@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileUp } from "lucide-react";
 import { DragEvent, useMemo, useState } from "react";
 import { tradeCopilotApi } from "../api/tradeCopilotApi";
+import { ActionIconButton } from "../components/ActionIconButton";
 import { DecimalInput } from "../components/DecimalInput";
 import { transactionTypes } from "../domain/options";
 import type { CreateTransactionPayload, Transaction, TransactionImportProvider, TransactionImportResult } from "../domain/types";
@@ -264,7 +265,7 @@ export function TransactionsPage() {
                   <thead><tr><th>Date</th><th>Type</th><th>Portefeuille</th><th>Actif</th><th>Quantite</th><th>Montant</th><th></th></tr></thead>
                   <tbody>
                     {transactions.map((transaction) => (
-                      <tr key={transaction.id}>
+                      <tr className={editingId === transaction.id ? "editingRow" : undefined} key={transaction.id}>
                         <td>{transaction.date}</td>
                         <td>{transaction.type}</td>
                         <td>{portfolioById.get(transaction.portfolioId)?.name ?? "-"}</td>
@@ -280,8 +281,9 @@ export function TransactionsPage() {
                         <td>{formatCurrency(transaction.quantity * transaction.unitPrice + transaction.fees)}</td>
                         <td>
                           <div className="rowActions">
-                            <button className="linkButton" type="button" onClick={() => editTransaction(transaction)}>Modifier</button>
-                            <button className="linkButton dangerText" type="button" onClick={() => deleteTransaction.mutate(transaction.id)}>Supprimer</button>
+                            {editingId === transaction.id ? <span className="editingBadge">En edition</span> : null}
+                            <ActionIconButton action="edit" isActive={editingId === transaction.id} label={`Modifier la transaction du ${transaction.date}`} onClick={() => editTransaction(transaction)} />
+                            <ActionIconButton action="delete" label={`Supprimer la transaction du ${transaction.date}`} onClick={() => deleteTransaction.mutate(transaction.id)} />
                           </div>
                         </td>
                       </tr>

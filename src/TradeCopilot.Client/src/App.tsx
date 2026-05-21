@@ -1,8 +1,8 @@
-import { BarChart3, BrainCircuit, BriefcaseBusiness, LineChart, ReceiptText, ShieldCheck } from "lucide-react";
+import { BarChart3, BrainCircuit, BriefcaseBusiness, LineChart, ReceiptText, Settings2, ShieldCheck } from "lucide-react";
 import { lazy, Suspense, useState } from "react";
 import { AppShell, type NavigationItem } from "./components/AppShell";
 
-type ViewKey = "dashboard" | "portfolios" | "assets" | "transactions" | "assistant" | "strategy";
+type ViewKey = "dashboard" | "portfolios" | "assets" | "transactions" | "assistant" | "strategy" | "settings";
 
 const DashboardPage = lazy(() => import("./pages/DashboardPage").then((module) => ({ default: module.DashboardPage })));
 const PortfoliosPage = lazy(() => import("./pages/PortfoliosPage").then((module) => ({ default: module.PortfoliosPage })));
@@ -10,6 +10,7 @@ const AssetsPage = lazy(() => import("./pages/AssetsPage").then((module) => ({ d
 const TransactionsPage = lazy(() => import("./pages/TransactionsPage").then((module) => ({ default: module.TransactionsPage })));
 const AssistantPage = lazy(() => import("./pages/AssistantPage").then((module) => ({ default: module.AssistantPage })));
 const StrategyPage = lazy(() => import("./pages/StrategyPage").then((module) => ({ default: module.StrategyPage })));
+const SettingsPage = lazy(() => import("./pages/SettingsPage").then((module) => ({ default: module.SettingsPage })));
 
 const navigation: NavigationItem<ViewKey>[] = [
   { key: "dashboard", label: "Dashboard", icon: BarChart3 },
@@ -17,7 +18,8 @@ const navigation: NavigationItem<ViewKey>[] = [
   { key: "assets", label: "Actifs", icon: LineChart },
   { key: "transactions", label: "Transactions", icon: ReceiptText },
   { key: "assistant", label: "Assistant", icon: BrainCircuit },
-  { key: "strategy", label: "Strategie", icon: ShieldCheck }
+  { key: "strategy", label: "Strategie", icon: ShieldCheck },
+  { key: "settings", label: "Parametres", icon: Settings2 }
 ];
 
 export function App() {
@@ -32,6 +34,7 @@ export function App() {
         {activeView === "transactions" ? <TransactionsPage /> : null}
         {activeView === "assistant" ? <AssistantPage /> : null}
         {activeView === "strategy" ? <StrategyPage /> : null}
+        {activeView === "settings" ? <SettingsPage /> : null}
       </Suspense>
     </AppShell>
   );

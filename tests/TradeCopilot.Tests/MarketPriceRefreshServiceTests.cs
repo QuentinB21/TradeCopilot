@@ -193,12 +193,64 @@ public sealed class MarketPriceRefreshServiceTests
         Assert.Equal(1, provider.Calls);
     }
 
-    private static Transaction Buy(Guid assetId) => new()
+    [Fact]
+    public async Task Backfills_daily_prices_from_first_transaction_date()
+    {
+        var assetId = Guid.NewGuid();
+        var firstTransactionDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-10);
+        var asset = new Asset
+        {
+            Id = assetId,
+            Name = "Microsoft",
+            Symbol = "MSFT",
+            Type = AssetType.Stock,
+            Currency = "EUR",
+            StrategicStatus = StrategicStatus.Core
+        };
+        var repository = new FakeInvestmentRepository();
+        var provider = new FakeMarketDataProvider(
+            quote: null,
+            dailyQuotesBySymbol: new Dictionary<string, IReadOnlyList<MarketQuoteDto>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["MSFT"] =
+                [
+                    new(
+                        "MSFT",
+                        firstTransactionDate,
+                        410m,
+                        420m,
+                        405m,
+                        418m,
+                        "EUR",
+                        "test-provider",
+                        DateTimeOffset.UtcNow),
+                    new(
+                        "MSFT",
+                        firstTransactionDate.AddDays(1),
+                        418m,
+                        425m,
+                        415m,
+                        422m,
+                        "EUR",
+                        "test-provider",
+                        DateTimeOffset.UtcNow)
+                ]
+            });
+
+        var prices = await new MarketPriceRefreshService(repository, provider)
+            .RefreshCurrentPricesAsync([asset], [Buy(assetId, firstTransactionDate)], []);
+
+        Assert.Equal([firstTransactionDate, firstTransactionDate.AddDays(1)], prices.Select(price => price.Date).ToList());
+        Assert.Equal(2, repository.AddedPrices.Count);
+        Assert.Equal(1, provider.DailyCalls);
+    }
+
+    private static Transaction Buy(Guid assetId, DateOnly? date = null) => new()
     {
         PortfolioId = Guid.NewGuid(),
         AssetId = assetId,
         Type = TransactionType.Buy,
-        Date = new DateOnly(2026, 5, 21),
+        Date = date ?? new DateOnly(2026, 5, 21),
         Quantity = 1m,
         UnitPrice = 100m,
         Fees = 0m,
@@ -208,10 +260,12 @@ public sealed class MarketPriceRefreshServiceTests
     private sealed class FakeMarketDataProvider(
         MarketQuoteDto? quote,
         IReadOnlyList<InstrumentSearchResultDto>? searchResults = null,
-        IReadOnlyDictionary<string, MarketQuoteDto>? quotesBySymbol = null) : IMarketDataProvider
+        IReadOnlyDictionary<string, MarketQuoteDto>? quotesBySymbol = null,
+        IReadOnlyDictionary<string, IReadOnlyList<MarketQuoteDto>>? dailyQuotesBySymbol = null) : IMarketDataProvider
     {
         public int Calls { get; private set; }
         public int SearchCalls { get; private set; }
+        public int DailyCalls { get; private set; }
 
         public Task<IReadOnlyList<InstrumentSearchResultDto>> SearchInstrumentsAsync(string query, CancellationToken cancellationToken = default)
         {
@@ -228,6 +282,22 @@ public sealed class MarketPriceRefreshServiceTests
             }
 
             return Task.FromResult(quote);
+        }
+
+        public Task<IReadOnlyList<MarketQuoteDto>> GetDailyQuotesAsync(
+            string symbol,
+            DateOnly from,
+            DateOnly to,
+            CancellationToken cancellationToken = default)
+        {
+            DailyCalls++;
+            if (dailyQuotesBySymbol is not null && dailyQuotesBySymbol.TryGetValue(symbol, out var symbolQuotes))
+            {
+                return Task.FromResult<IReadOnlyList<MarketQuoteDto>>(
+                    symbolQuotes.Where(symbolQuote => symbolQuote.Date >= from && symbolQuote.Date <= to).ToList());
+            }
+
+            return Task.FromResult<IReadOnlyList<MarketQuoteDto>>([]);
         }
     }
 

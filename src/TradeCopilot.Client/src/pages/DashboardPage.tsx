@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowDownRight, ArrowUpRight, CircleDollarSign, Target } from "lucide-react";
-import { useMemo } from "react";
+import { AlertTriangle, ArrowDownRight, ArrowUpRight, CircleDollarSign, RefreshCw, Target } from "lucide-react";
+import { type CSSProperties, useEffect, useMemo, useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { tradeCopilotApi } from "../api/tradeCopilotApi";
 import { Metric } from "../components/Metric";
@@ -8,27 +8,92 @@ import { MarketBindingPanel } from "../components/MarketBindingPanel";
 import { PageHeader } from "../components/PageHeader";
 import { Panel } from "../components/Panel";
 import { QueryState } from "../components/QueryState";
+import { readDashboardRefreshInterval } from "../lib/appSettings";
 import { formatCurrencyCompact, formatPercent } from "../lib/format";
 import type { Dashboard, DashboardHistoryPoint, PortfolioSummary, Position } from "../domain/types";
 
 const chartColors = ["#0a0a0a", "#155eef", "#0b7a48", "#b86a00", "#c22a2a", "#525252", "#7c3aed", "#0f766e"];
 
 export function DashboardPage() {
+  const [refreshIntervalMs] = useState(readDashboardRefreshInterval);
+  const [now, setNow] = useState(() => Date.now());
+  const [nextRefreshAt, setNextRefreshAt] = useState(() => Date.now() + refreshIntervalMs);
   const dashboardQuery = useQuery({
     queryKey: ["dashboard"],
     queryFn: tradeCopilotApi.getDashboard,
-    refetchInterval: 5 * 60 * 1000,
+    refetchInterval: refreshIntervalMs,
+    refetchIntervalInBackground: true,
     staleTime: 60 * 1000
   });
 
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (dashboardQuery.dataUpdatedAt > 0) {
+      setNextRefreshAt(dashboardQuery.dataUpdatedAt + refreshIntervalMs);
+    }
+  }, [dashboardQuery.dataUpdatedAt, refreshIntervalMs]);
+
   return (
     <>
-      <PageHeader title="Vue patrimoniale" description="Suivi consolide des performances, objectifs d'allocation et valorisations disponibles, rafraichi toutes les 5 minutes." />
+      <PageHeader
+        title="Vue patrimoniale"
+        description="Suivi consolide des performances, objectifs d'allocation et valorisations disponibles."
+        action={(
+          <DashboardRefreshControl
+            intervalMs={refreshIntervalMs}
+            isRefreshing={dashboardQuery.isFetching}
+            nextRefreshAt={nextRefreshAt}
+            now={now}
+          />
+        )}
+      />
       <QueryState isLoading={dashboardQuery.isLoading} error={dashboardQuery.error}>
         {dashboardQuery.data ? <DashboardContent dashboard={dashboardQuery.data} /> : null}
       </QueryState>
     </>
   );
+}
+
+function DashboardRefreshControl({
+  intervalMs,
+  isRefreshing,
+  nextRefreshAt,
+  now
+}: {
+  intervalMs: number;
+  isRefreshing: boolean;
+  nextRefreshAt: number;
+  now: number;
+}) {
+  const remainingMs = Math.min(Math.max(nextRefreshAt - now, 0), intervalMs);
+  const progress = Math.min(Math.max(1 - remainingMs / intervalMs, 0), 1);
+
+  return (
+    <div className="dashboardRefresh">
+      <div
+        aria-live="polite"
+        className={isRefreshing ? "refreshTimer refreshing" : "refreshTimer"}
+        style={{ "--refresh-progress": `${progress * 360}deg` } as CSSProperties}
+      >
+        <RefreshCw size={14} />
+      </div>
+      <div className="refreshTimerText">
+        <span>{isRefreshing ? "Mise a jour" : "Actualisation dans"}</span>
+        <strong>{isRefreshing ? "..." : formatCountdown(remainingMs)}</strong>
+      </div>
+    </div>
+  );
+}
+
+function formatCountdown(milliseconds: number) {
+  const seconds = Math.ceil(milliseconds / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
 }
 
 function DashboardContent({ dashboard }: { dashboard: Dashboard }) {

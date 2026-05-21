@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { tradeCopilotApi } from "../api/tradeCopilotApi";
+import { ActionIconButton } from "../components/ActionIconButton";
 import { DecimalInput } from "../components/DecimalInput";
 import { portfolioTypes } from "../domain/options";
 import type { CreatePortfolioPayload, Portfolio } from "../domain/types";
@@ -83,13 +84,17 @@ export function PortfoliosPage() {
           <QueryState isLoading={portfoliosQuery.isLoading} error={portfoliosQuery.error}>
             <div className="compactList">
               {(portfoliosQuery.data ?? []).map((portfolio) => (
-                <button className="entityRow" key={portfolio.id} onClick={() => edit(portfolio)} type="button">
+                <div className={editingId === portfolio.id ? "compactRow editingEntity" : "compactRow"} key={portfolio.id}>
                   <div>
                     <strong>{portfolio.name}</strong>
                     <span>{portfolio.broker} - {portfolio.type} - cle {Math.round(portfolio.targetWeight * 100)}%</span>
                   </div>
-                  <span>{formatCurrency(portfolio.cashBalance)}</span>
-                </button>
+                  <div className="rowEnd">
+                    <span>{formatCurrency(portfolio.cashBalance)}</span>
+                    {editingId === portfolio.id ? <span className="editingBadge">En edition</span> : null}
+                    <ActionIconButton action="edit" isActive={editingId === portfolio.id} label={`Modifier ${portfolio.name}`} onClick={() => edit(portfolio)} />
+                  </div>
+                </div>
               ))}
             </div>
           </QueryState>

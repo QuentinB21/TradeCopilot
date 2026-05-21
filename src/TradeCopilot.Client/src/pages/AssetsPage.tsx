@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { tradeCopilotApi } from "../api/tradeCopilotApi";
+import { ActionIconButton } from "../components/ActionIconButton";
 import { assetTypes, strategicStatuses } from "../domain/options";
 import type { Asset, CreateAssetPayload, InstrumentSearchResult } from "../domain/types";
 import { PageHeader } from "../components/PageHeader";
@@ -130,12 +131,17 @@ export function AssetsPage() {
                 <thead><tr><th>Actif</th><th>Cotation liee</th><th>Type</th><th>Statut</th><th></th></tr></thead>
                 <tbody>
                   {(assetsQuery.data ?? []).map((asset) => (
-                    <tr key={asset.id}>
+                    <tr className={editingId === asset.id ? "editingRow" : undefined} key={asset.id}>
                       <td><strong>{asset.name}</strong><span>{asset.symbol}</span></td>
                       <td>{asset.marketSymbol ? <><strong>{asset.marketSymbol}</strong><span>{asset.priceProvider ?? "Source auto"}</span></> : <span>A lier si le cours manque</span>}</td>
                       <td>{asset.type}</td>
                       <td><span className="status">{asset.strategicStatus}</span></td>
-                      <td><button className="linkButton" onClick={() => edit(asset)} type="button">Modifier</button></td>
+                      <td>
+                        <div className="rowActions">
+                          {editingId === asset.id ? <span className="editingBadge">En edition</span> : null}
+                          <ActionIconButton action="edit" isActive={editingId === asset.id} label={`Modifier ${asset.name}`} onClick={() => edit(asset)} />
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
