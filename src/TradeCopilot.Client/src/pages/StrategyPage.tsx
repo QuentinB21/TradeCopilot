@@ -248,11 +248,34 @@ export function StrategyPage() {
     <>
       <PageHeader
         title="Configuration strategie"
-        description="Parametrage initial : enveloppes, actifs, cles de repartition et regles de decision."
+        description="Parametrage initial : enveloppes, actifs, cles de repartition et regles qui structurent le pilotage."
       />
 
+      <section className="strategyOverview">
+        <article>
+          <span>Portefeuilles</span>
+          <strong>{portfolios.length}</strong>
+          <small>Cles globales</small>
+        </article>
+        <article>
+          <span>Actifs</span>
+          <strong>{assets.length}</strong>
+          <small>Statuts strategiques</small>
+        </article>
+        <article>
+          <span>Cles par ligne</span>
+          <strong>{allocationRulesQuery.data?.length ?? 0}</strong>
+          <small>Ponderations cibles</small>
+        </article>
+        <article>
+          <span>Regles</span>
+          <strong>{strategyRulesQuery.data?.length ?? 0}</strong>
+          <small>Decisions explicites</small>
+        </article>
+      </section>
+
       <section className="configurationGrid">
-        <Panel title="Portefeuilles et cles globales" subtitle="Ex: 0.80 pour 80%">
+        <Panel className="strategyPanel" title="Portefeuilles et cles globales" subtitle="Ex: 0.80 pour 80%">
           <form className="form" onSubmit={(event) => { event.preventDefault(); savePortfolio.mutate(); }}>
             <label>Nom<input value={portfolioForm.name} onChange={(event) => setPortfolioForm({ ...portfolioForm, name: event.target.value })} required /></label>
             <label>Type<select value={portfolioForm.type} onChange={(event) => setPortfolioForm({ ...portfolioForm, type: event.target.value as CreatePortfolioPayload["type"] })}>{portfolioTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
@@ -279,7 +302,7 @@ export function StrategyPage() {
           </QueryState>
         </Panel>
 
-        <Panel title="Actifs configurables">
+        <Panel className="strategyPanel" title="Actifs configurables">
           <form className="form" onSubmit={(event) => { event.preventDefault(); saveAsset.mutate(); }}>
             <label>Nom<input value={assetForm.name} onChange={(event) => setAssetForm({ ...assetForm, name: event.target.value })} required /></label>
             <label>Symbole<input value={assetForm.symbol} onChange={(event) => setAssetForm({ ...assetForm, symbol: event.target.value })} required /></label>
@@ -306,7 +329,7 @@ export function StrategyPage() {
           </QueryState>
         </Panel>
 
-        <Panel title="Cles par ligne" subtitle="Ponderation dans chaque portefeuille">
+        <Panel className="strategyPanel" title="Cles par ligne" subtitle="Ponderation dans chaque portefeuille">
           <form className="form" onSubmit={(event) => { event.preventDefault(); saveAllocationRule.mutate(); }}>
             <label>Portefeuille<select value={allocationForm.portfolioId} onChange={(event) => setAllocationForm({ ...allocationForm, portfolioId: event.target.value })} required disabled={Boolean(editingAllocationRuleId)}><option value="">Selectionner</option>{portfolios.map((portfolio) => <option value={portfolio.id} key={portfolio.id}>{portfolio.name}</option>)}</select></label>
             <label>Actif<select value={allocationForm.assetId} onChange={(event) => setAllocationForm({ ...allocationForm, assetId: event.target.value })} required disabled={Boolean(editingAllocationRuleId)}><option value="">Selectionner</option>{assets.map((asset) => <option value={asset.id} key={asset.id}>{asset.symbol} - {asset.name}</option>)}</select></label>
@@ -336,7 +359,7 @@ export function StrategyPage() {
           </QueryState>
         </Panel>
 
-        <Panel title="Regles de decision">
+        <Panel className="strategyPanel" title="Regles de decision">
           <form className="form" onSubmit={(event) => { event.preventDefault(); saveStrategyRule.mutate(); }}>
             <label>Nom<input value={strategyRuleForm.name} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, name: event.target.value })} required /></label>
             <label>Description<input value={strategyRuleForm.description} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, description: event.target.value })} required /></label>

@@ -18,11 +18,11 @@ export function AssistantPage() {
     <>
       <PageHeader
         title="Assistant mensuel"
-        description="Recommandation consultative selon l'allocation cible et les statuts strategiques."
+        description="Transformer les cles cibles et les statuts strategiques en proposition d'allocation mensuelle."
         action={<button className="ghostButton" onClick={() => monthlyPlan.mutate(amountValue)} type="button"><BrainCircuit size={18} /> Calculer</button>}
       />
-      <section className="grid">
-        <Panel title="Parametres">
+      <section className="assistantWorkspace">
+        <Panel className="assistantInputPanel" title="Parametres" subtitle="Le calcul reste consultatif et ne declenche aucun ordre.">
           <form className="form" onSubmit={(event) => { event.preventDefault(); monthlyPlan.mutate(amountValue); }}>
             <label>Montant a investir<DecimalInput min={0} step={50} value={amount} onChange={setAmount} /></label>
             <button type="submit">Generer la recommandation</button>
@@ -34,7 +34,7 @@ export function AssistantPage() {
           ) : null}
         </Panel>
 
-        <Panel title="Plan propose">
+        <Panel className="assistantPlanPanel" title="Plan propose">
           {monthlyPlan.data ? (
             <div className="plan">
               {monthlyPlan.data.envelopes.map((envelope) => (

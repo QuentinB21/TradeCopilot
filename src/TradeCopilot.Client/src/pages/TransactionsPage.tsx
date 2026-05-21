@@ -175,9 +175,9 @@ export function TransactionsPage() {
 
   return (
     <>
-      <PageHeader title="Positions et transactions" description="Saisie des positions d'ouverture, achats, ventes, versements, dividendes et frais." />
-      <section className="grid">
-        <Panel title="Importer des transactions" subtitle="Le format est choisi explicitement pour pouvoir ajouter d'autres banques ensuite.">
+      <PageHeader title="Transactions" description="Importer en priorite, corriger ensuite. Les saisies manuelles restent disponibles pour les cas incomplets." />
+      <section className="transactionsWorkspace">
+        <Panel className="importPanel" title="Importer des transactions" subtitle="Choisir la provenance pour appliquer le bon traitement CSV.">
           <form className="form" onSubmit={(event) => { event.preventDefault(); importTransactions.mutate(); }}>
             <label>Provenance<select value={importProvider} onChange={(event) => setImportProvider(event.target.value as TransactionImportProvider)}><option value="TradeRepublic">Trade Republic</option><option value="Boursobank">Boursobank</option></select></label>
             <label>Portefeuille cible<select value={importPortfolioId} onChange={(event) => setImportPortfolioId(event.target.value)} required><option value="">Selectionner</option>{(portfoliosQuery.data ?? []).map((portfolio) => <option value={portfolio.id} key={portfolio.id}>{portfolio.name}</option>)}</select></label>
@@ -209,7 +209,7 @@ export function TransactionsPage() {
           {importTransactions.error && <p className="stateError">{errorText(importTransactions.error)}</p>}
         </Panel>
 
-        <Panel title={editingId ? "Modifier la transaction" : "Nouvelle position ou transaction"} subtitle="Pour un portefeuille deja existant, saisir une position d'ouverture en achat.">
+        <Panel className="transactionEditorPanel" title={editingId ? "Modifier la transaction" : "Saisie manuelle"} subtitle="Pour une position deja detenue, saisir l'achat d'ouverture avec quantite et PRU.">
           <form className="form" onSubmit={(event) => { event.preventDefault(); saveTransaction.mutate(); }}>
             <label>Portefeuille<select value={form.portfolioId} onChange={(event) => setForm({ ...form, portfolioId: event.target.value })} required><option value="">Selectionner</option>{(portfoliosQuery.data ?? []).map((portfolio) => <option value={portfolio.id} key={portfolio.id}>{portfolio.name}</option>)}</select></label>
             <label>Actif<select value={form.assetId ?? ""} onChange={(event) => setForm({ ...form, assetId: event.target.value })}><option value="">Aucun</option>{(assetsQuery.data ?? []).map((asset) => <option value={asset.id} key={asset.id}>{asset.symbol} - {asset.name}</option>)}</select></label>
@@ -228,7 +228,7 @@ export function TransactionsPage() {
           {(saveTransaction.error || deleteTransaction.error) && <p className="stateError">{errorText(saveTransaction.error ?? deleteTransaction.error)}</p>}
         </Panel>
 
-        <Panel title="Historique">
+        <Panel className="ledgerPanel" title="Historique" subtitle="Operations importees et corrections manuelles.">
           <QueryState isLoading={transactionsQuery.isLoading} error={transactionsQuery.error}>
             {transactions.length === 0 ? (
               <p className="emptyState">Aucune transaction saisie.</p>

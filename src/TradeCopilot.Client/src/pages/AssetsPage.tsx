@@ -83,9 +83,13 @@ export function AssetsPage() {
 
   return (
     <>
-      <PageHeader title="Actifs" description="Referentiel des ETF, actions et statuts strategiques." />
-      <section className="grid">
-        <Panel title={editingId ? "Modifier un actif" : "Nouvel actif"}>
+      <PageHeader title="Actifs" description="Rechercher un instrument, completer ses informations puis l'utiliser dans la strategie et les transactions." />
+      <section className="assetWorkspace">
+        <Panel
+          className="assetEditorPanel"
+          title={editingId ? "Modifier un actif" : "Nouvel actif"}
+          subtitle="Nom, ticker ou ISIN pour eviter la saisie manuelle inutile."
+        >
           <form className="form searchForm" onSubmit={(event) => { event.preventDefault(); searchInstruments.mutate(); }}>
             <label>Rechercher par nom, ticker ou ISIN<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Ex: Air Liquide, AI.PA, US0378331005" /></label>
             <button type="submit" disabled={search.trim().length < 2 || searchInstruments.isPending}>Rechercher</button>
@@ -116,7 +120,7 @@ export function AssetsPage() {
           </form>
         </Panel>
 
-        <Panel title="Actifs suivis">
+        <Panel className="assetRegistryPanel" title="Actifs suivis" subtitle="Referentiel utilise par les cles et le suivi de positions.">
           <QueryState isLoading={assetsQuery.isLoading} error={assetsQuery.error}>
             <div className="tableWrap compactTable">
               <table>

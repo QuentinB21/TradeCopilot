@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, ArrowDownRight, ArrowUpRight, CircleDollarSign, Target } from "lucide-react";
 import { useMemo } from "react";
+import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { tradeCopilotApi } from "../api/tradeCopilotApi";
 import { Metric } from "../components/Metric";
 import { PageHeader } from "../components/PageHeader";
@@ -9,7 +10,7 @@ import { QueryState } from "../components/QueryState";
 import { formatCurrencyCompact, formatPercent } from "../lib/format";
 import type { Dashboard, DashboardHistoryPoint, PortfolioSummary, Position } from "../domain/types";
 
-const chartColors = ["#123c35", "#2f6fed", "#b06618", "#7a4cc2", "#c24155", "#0f766e", "#475569", "#a16207"];
+const chartColors = ["#0a0a0a", "#155eef", "#0b7a48", "#b86a00", "#c22a2a", "#525252", "#7c3aed", "#0f766e"];
 
 export function DashboardPage() {
   const dashboardQuery = useQuery({
@@ -38,11 +39,11 @@ function DashboardContent({ dashboard }: { dashboard: Dashboard }) {
 
   if (dashboard.portfolios.length === 0) {
     return (
-      <Panel title="Demarrage">
+      <Panel title="Demarrage" subtitle="Le dashboard devient utile des que la configuration et les donnees existent." className="setupPanel">
         <div className="setupSteps">
           <div><strong>1. Strategie</strong><span>Creer les portefeuilles, actifs, cles et regles.</span></div>
           <div><strong>2. Transactions</strong><span>Importer ou saisir les lignes deja detenues avec quantite et PRU.</span></div>
-          <div><strong>3. Dashboard</strong><span>Suivre la valorisation, les ecarts aux objectifs et les lignes non valorisees.</span></div>
+          <div><strong>3. Pilotage</strong><span>Suivre la valorisation, les ecarts aux objectifs et les lignes non valorisees.</span></div>
         </div>
       </Panel>
     );
@@ -51,27 +52,31 @@ function DashboardContent({ dashboard }: { dashboard: Dashboard }) {
   return (
     <>
       <section className="metrics dashboardMetrics">
-        <Metric title="Valeur totale" value={formatCurrencyCompact(dashboard.totalMarketValue)} icon={<CircleDollarSign size={20} />} />
+        <Metric title="Valeur totale" value={formatCurrencyCompact(dashboard.totalMarketValue)} icon={<CircleDollarSign size={20} />} tone="positive" />
         <Metric title="Montant investi" value={formatCurrencyCompact(dashboard.totalInvested)} icon={<Target size={20} />} />
         <Metric
           title="Gain latent"
           value={formatCurrencyCompact(dashboard.totalUnrealizedGain)}
           detail={formatPercent(dashboard.totalUnrealizedGainPercent)}
           icon={dashboard.totalUnrealizedGain >= 0 ? <ArrowUpRight size={20} /> : <ArrowDownRight size={20} />}
+          tone={dashboard.totalUnrealizedGain >= 0 ? "positive" : "negative"}
         />
-        <Metric title="Cours manquants" value={String(missingPriceCount)} detail="valorisees au PRU" icon={<AlertTriangle size={20} />} />
+        <Metric title="Cours manquants" value={String(missingPriceCount)} detail="valorisees au PRU" icon={<AlertTriangle size={20} />} tone="warning" />
+      </section>
+
+      <section className="dashboardFocusGrid">
+        <Panel title="Evolution globale" subtitle="Valeur de marche et capital investi" className="chartPanel">
+          <TotalValueChart history={dashboard.history} />
+        </Panel>
+        <Panel title="A surveiller" subtitle="Ecarts qui meritent une action" className="watchPanel">
+          <DashboardWatchlist positions={dashboard.positions} missingPriceCount={missingPriceCount} />
+        </Panel>
       </section>
 
       <section className="grid dashboardGrid">
-        <Panel title="Evolution globale" subtitle="Valeur de marche et capital investi">
-          <TotalValueChart history={dashboard.history} />
-        </Panel>
         <Panel title="Objectifs par portefeuille" subtitle="Poids reel vs cle cible">
           <PortfolioObjectiveProgress portfolios={dashboard.portfolios} />
         </Panel>
-      </section>
-
-      <section className="grid dashboardGrid">
         <Panel title="Evolution par portefeuille" subtitle={`${dashboard.portfolios.length} enveloppes suivies`}>
           <PortfolioHistoryChart dashboard={dashboard} />
         </Panel>
@@ -94,19 +99,27 @@ function TotalValueChart({ history }: { history: DashboardHistoryPoint[] }) {
   }
 
   const maxValue = Math.max(...points.flatMap((point) => [point.totalMarketValue, point.totalInvested]), 1);
-  const marketPath = buildLinePath(points, (point) => point.totalMarketValue, maxValue);
-  const investedPath = buildLinePath(points, (point) => point.totalInvested, maxValue);
 
   return (
     <div className="chartBlock">
-      <svg className="lineChart" viewBox="0 0 720 260" role="img" aria-label="Evolution globale du patrimoine">
-        <ChartGrid />
-        <path d={investedPath} fill="none" stroke="#b06618" strokeWidth="3" strokeLinecap="round" />
-        <path d={marketPath} fill="none" stroke="#123c35" strokeWidth="3.5" strokeLinecap="round" />
-      </svg>
-      <div className="chartLegend">
-        <span><i style={{ background: "#123c35" }} /> Valeur</span>
-        <span><i style={{ background: "#b06618" }} /> Investi</span>
+      <div className="chartCanvas" role="img" aria-label="Evolution globale du patrimoine">
+        <ResponsiveContainer width="100%" height={280}>
+          <LineChart data={points} margin={{ top: 18, right: 18, bottom: 8, left: 4 }}>
+            <CartesianGrid stroke="#deded8" strokeDasharray="4 8" vertical={false} />
+            <XAxis dataKey="date" tickFormatter={formatShortDate} axisLine={false} tickLine={false} minTickGap={24} />
+            <YAxis
+              axisLine={false}
+              domain={[0, maxValue]}
+              tickFormatter={(value) => formatCurrencyCompact(Number(value))}
+              tickLine={false}
+              width={88}
+            />
+            <Tooltip content={<PortfolioTooltip />} />
+            <Legend />
+            <Line dataKey="totalInvested" dot={false} name="Investi" stroke="#b86a00" strokeWidth={2.5} type="monotone" />
+            <Line dataKey="totalMarketValue" dot={false} name="Valeur" stroke="#0a0a0a" strokeWidth={3} type="monotone" />
+          </LineChart>
+        </ResponsiveContainer>
       </div>
       <div className="chartRange">
         <span>{formatDate(points[0].date)}</span>
@@ -131,23 +144,39 @@ function PortfolioHistoryChart({ dashboard }: { dashboard: Dashboard }) {
 
   return (
     <div className="chartBlock">
-      <svg className="lineChart" viewBox="0 0 720 260" role="img" aria-label="Evolution par portefeuille">
-        <ChartGrid />
-        {activePortfolios.map((portfolio, index) => (
-          <path
-            key={portfolio.portfolioId}
-            d={buildLinePath(points, (point) => point.portfolios.find((item) => item.portfolioId === portfolio.portfolioId)?.marketValue ?? 0, maxValue)}
-            fill="none"
-            stroke={chartColors[index % chartColors.length]}
-            strokeWidth="3"
-            strokeLinecap="round"
-          />
-        ))}
-      </svg>
-      <div className="chartLegend">
-        {activePortfolios.slice(0, chartColors.length).map((portfolio, index) => (
-          <span key={portfolio.portfolioId}><i style={{ background: chartColors[index % chartColors.length] }} /> {portfolio.name}</span>
-        ))}
+      <div className="chartCanvas" role="img" aria-label="Evolution par portefeuille">
+        <ResponsiveContainer width="100%" height={280}>
+          <LineChart
+            data={points.map((point) => ({
+              date: point.date,
+              ...Object.fromEntries(point.portfolios.map((portfolio) => [portfolio.portfolioId, portfolio.marketValue]))
+            }))}
+            margin={{ top: 18, right: 18, bottom: 8, left: 4 }}
+          >
+            <CartesianGrid stroke="#deded8" strokeDasharray="4 8" vertical={false} />
+            <XAxis dataKey="date" tickFormatter={formatShortDate} axisLine={false} tickLine={false} minTickGap={24} />
+            <YAxis
+              axisLine={false}
+              domain={[0, maxValue]}
+              tickFormatter={(value) => formatCurrencyCompact(Number(value))}
+              tickLine={false}
+              width={88}
+            />
+            <Tooltip content={<PortfolioTooltip />} />
+            <Legend />
+            {activePortfolios.map((portfolio, index) => (
+              <Line
+                dataKey={portfolio.portfolioId}
+                dot={false}
+                key={portfolio.portfolioId}
+                name={portfolio.name}
+                stroke={chartColors[index % chartColors.length]}
+                strokeWidth={2.5}
+                type="monotone"
+              />
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );
@@ -226,36 +255,56 @@ function ObjectiveRow({ label, detail, actual, target, drift }: { label: string;
   );
 }
 
-function ChartGrid() {
-  return (
-    <g className="chartGridLines">
-      {[40, 85, 130, 175, 220].map((y) => <line key={y} x1="44" x2="696" y1={y} y2={y} />)}
-    </g>
-  );
-}
-
-function buildLinePath(points: DashboardHistoryPoint[], getValue: (point: DashboardHistoryPoint) => number, maxValue: number) {
-  const width = 652;
-  const height = 184;
-  const left = 44;
-  const top = 36;
-  const denominator = Math.max(points.length - 1, 1);
-
-  return points
-    .map((point, index) => {
-      const x = left + (index / denominator) * width;
-      const y = top + height - (Math.max(getValue(point), 0) / maxValue) * height;
-      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
-    })
-    .join(" ");
-}
-
 function normalizeHistory(history: DashboardHistoryPoint[]) {
   return [...history].sort((left, right) => left.date.localeCompare(right.date));
 }
 
 function formatDate(date: string) {
   return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short", year: "2-digit" }).format(new Date(`${date}T00:00:00`));
+}
+
+function formatShortDate(date: string) {
+  return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short" }).format(new Date(`${date}T00:00:00`));
+}
+
+function PortfolioTooltip({ active, label, payload }: { active?: boolean; label?: string; payload?: Array<{ name?: string; value?: number | string; color?: string }> }) {
+  if (!active || !payload?.length) {
+    return null;
+  }
+
+  return (
+    <div className="chartTooltip">
+      <strong>{label ? formatDate(label) : "Valeur"}</strong>
+      {payload.map((entry) => (
+        <span key={entry.name} style={{ color: entry.color }}>
+          {entry.name}: {formatCurrencyCompact(Number(entry.value ?? 0))}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function DashboardWatchlist({ positions, missingPriceCount }: { positions: Position[]; missingPriceCount: number }) {
+  const driftedPositions = positions
+    .filter((position) => position.targetWeight !== null)
+    .sort((left, right) => Math.abs(right.allocationDrift ?? 0) - Math.abs(left.allocationDrift ?? 0))
+    .slice(0, 3);
+
+  return (
+    <div className="watchList">
+      <div className={missingPriceCount > 0 ? "watchItem watchItem-warning" : "watchItem watchItem-positive"}>
+        <strong>{missingPriceCount > 0 ? "Valorisation incomplete" : "Valorisation disponible"}</strong>
+        <span>{missingPriceCount > 0 ? `${missingPriceCount} ligne(s) utilisent encore le PRU.` : "Toutes les lignes suivies ont un cours exploitable."}</span>
+      </div>
+      {driftedPositions.map((position) => (
+        <div className="watchItem" key={`${position.portfolioId}-${position.assetId}`}>
+          <strong>{position.symbol}</strong>
+          <span>{position.portfolioName} - ecart {formatPercent(position.allocationDrift ?? 0)} vs cible.</span>
+        </div>
+      ))}
+      {driftedPositions.length === 0 ? <p className="emptyState">Les ecarts apparaitront apres configuration des cles par ligne.</p> : null}
+    </div>
+  );
 }
 
 export function PositionTable({ positions }: { positions: Position[] }) {

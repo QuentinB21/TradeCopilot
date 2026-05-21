@@ -62,15 +62,15 @@ export function PortfoliosPage() {
 
   return (
     <>
-      <PageHeader title="Portefeuilles" description="Gestion des enveloppes d'investissement et soldes especes." />
-      <section className="grid">
-        <Panel title={editingId ? "Modifier un portefeuille" : "Nouveau portefeuille"}>
+      <PageHeader title="Portefeuilles" description="Creer les enveloppes d'investissement, suivre leur solde especes et cadrer leur poids cible." />
+      <section className="portfolioWorkspace">
+        <Panel className="portfolioEditorPanel" title={editingId ? "Modifier un portefeuille" : "Nouveau portefeuille"} subtitle="Une enveloppe correspond a un compte ou une plateforme suivie.">
           <form className="form" onSubmit={(event) => { event.preventDefault(); savePortfolio.mutate(); }}>
             <label>Nom<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required /></label>
             <label>Type<select value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value as CreatePortfolioPayload["type"] })}>{portfolioTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
             <label>Courtier<input value={form.broker} onChange={(event) => setForm({ ...form, broker: event.target.value })} required /></label>
             <label>Devise<input value={form.baseCurrency} onChange={(event) => setForm({ ...form, baseCurrency: event.target.value })} required maxLength={3} /></label>
-            <label>Cash<DecimalInput step="0.01" value={form.cashBalance} onChange={(value) => setForm({ ...form, cashBalance: value })} /></label>
+            <label>Solde especes<DecimalInput step="0.01" value={form.cashBalance} onChange={(value) => setForm({ ...form, cashBalance: value })} /><small>Liquidites disponibles dans ce portefeuille, hors titres detenus.</small></label>
             <label>Cle globale<DecimalInput step="0.01" min={0} max={1} value={form.targetWeight} onChange={(value) => setForm({ ...form, targetWeight: value })} /></label>
             <div className="formActions">
               <button type="submit">{editingId ? "Enregistrer" : "Creer"}</button>
@@ -79,7 +79,7 @@ export function PortfoliosPage() {
           </form>
         </Panel>
 
-        <Panel title="Portefeuilles existants">
+        <Panel className="portfolioListPanel" title="Portefeuilles existants" subtitle="Selectionner une ligne pour la corriger.">
           <QueryState isLoading={portfoliosQuery.isLoading} error={portfoliosQuery.error}>
             <div className="compactList">
               {(portfoliosQuery.data ?? []).map((portfolio) => (

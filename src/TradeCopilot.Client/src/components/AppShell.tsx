@@ -19,12 +19,17 @@ export function AppShell<TKey extends string>({ activeView, navigation, children
     <main className="app">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brandMark">TC</div>
+          <div className="brandMark" aria-hidden="true">
+            <span />
+          </div>
           <div>
             <strong>TradeCopilot</strong>
-            <span>Copilote patrimonial</span>
+            <span>Pilotage patrimonial</span>
           </div>
         </div>
+        <p className="sidebarIntro">
+          Suivre les positions, cadrer la strategie et garder les decisions lisibles.
+        </p>
         <nav className="nav" aria-label="Navigation principale">
           {navigation.map((item) => {
             const Icon = item.icon;
@@ -34,6 +39,7 @@ export function AppShell<TKey extends string>({ activeView, navigation, children
                 key={item.key}
                 onClick={() => onNavigate(item.key)}
                 type="button"
+                aria-current={activeView === item.key ? "page" : undefined}
               >
                 <Icon size={18} />
                 {item.label}
@@ -41,6 +47,12 @@ export function AppShell<TKey extends string>({ activeView, navigation, children
             );
           })}
         </nav>
+        <section className="sidebarGuide" aria-label="Flux de demarrage">
+          <span>Ordre conseille</span>
+          <strong>Configurer</strong>
+          <strong>Importer</strong>
+          <strong>Piloter</strong>
+        </section>
       </aside>
       <section className="workspace">{children}</section>
     </main>

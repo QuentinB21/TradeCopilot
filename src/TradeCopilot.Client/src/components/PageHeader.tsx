@@ -9,11 +9,11 @@ type PageHeaderProps = {
 export function PageHeader({ title, description, action }: PageHeaderProps) {
   return (
     <header className="topbar">
-      <div>
+      <div className="pageLead">
         <h1>{title}</h1>
         <p>{description}</p>
       </div>
-      {action}
+      {action ? <div className="pageActions">{action}</div> : null}
     </header>
   );
 }
