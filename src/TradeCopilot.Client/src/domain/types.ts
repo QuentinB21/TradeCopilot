@@ -159,16 +159,16 @@ export type MonthlyInvestmentPlan = {
   notes: string[];
 };
 
-export type AllocationRuleStatus = "Active" | "Frozen" | "ExitOnly";
+export type RepartitionStatus = "Active" | "Frozen" | "ExitOnly";
 
-export type AllocationRule = {
+export type Repartition = {
   id: string;
   portfolioId: string;
   assetId: string;
   targetWeight: number;
   minWeight: number | null;
   maxWeight: number | null;
-  status: AllocationRuleStatus;
+  status: RepartitionStatus;
 };
 
 export type StrategyRule = {
@@ -192,6 +192,6 @@ export type CreatePortfolioPayload = Omit<Portfolio, "id">;
 export type CreateAssetPayload = Omit<Asset, "id"> & { country: string | null };
 export type CreateTransactionPayload = Omit<Transaction, "id" | "importSource" | "externalId">;
 export type UpdateTransactionPayload = Omit<Transaction, "id" | "importSource" | "externalId">;
-export type CreateAllocationRulePayload = Omit<AllocationRule, "id">;
-export type UpdateAllocationRulePayload = Omit<AllocationRule, "id" | "portfolioId" | "assetId">;
+export type CreateRepartitionPayload = Omit<Repartition, "id">;
+export type UpdateRepartitionPayload = Omit<Repartition, "id" | "portfolioId" | "assetId">;
 export type CreateStrategyRulePayload = Omit<StrategyRule, "id">;

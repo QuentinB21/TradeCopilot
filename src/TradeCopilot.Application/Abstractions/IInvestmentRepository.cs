@@ -15,8 +15,8 @@ public interface IInvestmentRepository
     Task<IReadOnlySet<string>> GetImportedTransactionExternalIdsAsync(string importSource, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<AssetPrice>> GetPricesAsync(CancellationToken cancellationToken = default);
     Task<AssetPrice?> GetPriceByIdAsync(Guid id, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<AllocationRule>> GetAllocationRulesAsync(CancellationToken cancellationToken = default);
-    Task<AllocationRule?> GetAllocationRuleByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Repartition>> GetAssetRepartitionsAsync(CancellationToken cancellationToken = default);
+    Task<Repartition?> GetAssetRepartitionByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<StrategyRule>> GetStrategyRulesAsync(CancellationToken cancellationToken = default);
     Task<StrategyRule?> GetStrategyRuleByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task AddPortfolioAsync(Portfolio portfolio, CancellationToken cancellationToken = default);
@@ -32,9 +32,9 @@ public interface IInvestmentRepository
     Task AddPriceAsync(AssetPrice price, CancellationToken cancellationToken = default);
     Task UpdatePriceAsync(AssetPrice price, CancellationToken cancellationToken = default);
     Task DeletePriceAsync(AssetPrice price, CancellationToken cancellationToken = default);
-    Task AddAllocationRuleAsync(AllocationRule allocationRule, CancellationToken cancellationToken = default);
-    Task UpdateAllocationRuleAsync(AllocationRule allocationRule, CancellationToken cancellationToken = default);
-    Task DeleteAllocationRuleAsync(AllocationRule allocationRule, CancellationToken cancellationToken = default);
+    Task AddRepartitionAsync(Repartition repartition, CancellationToken cancellationToken = default);
+    Task UpdateRepartitionAsync(Repartition repartition, CancellationToken cancellationToken = default);
+    Task DeleteRepartitionAsync(Repartition repartition, CancellationToken cancellationToken = default);
     Task AddStrategyRuleAsync(StrategyRule strategyRule, CancellationToken cancellationToken = default);
     Task UpdateStrategyRuleAsync(StrategyRule strategyRule, CancellationToken cancellationToken = default);
     Task DeleteStrategyRuleAsync(StrategyRule strategyRule, CancellationToken cancellationToken = default);

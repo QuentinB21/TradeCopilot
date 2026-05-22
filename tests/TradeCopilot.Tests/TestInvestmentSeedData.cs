@@ -14,7 +14,7 @@ public static class TestInvestmentSeedData
             Broker = "BoursoBank",
             BaseCurrency = "EUR",
             CashBalance = 0m,
-            TargetWeight = 0.80m
+            Repartitions = [PortfolioRepartition(0.80m)]
         };
 
         var tradeRepublic = new Portfolio
@@ -25,7 +25,7 @@ public static class TestInvestmentSeedData
             Broker = "Trade Republic",
             BaseCurrency = "EUR",
             CashBalance = 0m,
-            TargetWeight = 0.20m
+            Repartitions = [PortfolioRepartition(0.20m)]
         };
 
         var wpea = Asset(Guid.Parse("20000000-0000-0000-0000-000000000001"), "iShares MSCI World Swap PEA", "WPEA", "IE0002XZSHO1", AssetType.Etf, "Global", StrategicStatus.Core);
@@ -68,18 +68,18 @@ public static class TestInvestmentSeedData
             Price(oracle.Id, today, 112.00m)
         };
 
-        var allocationRules = new[]
+        var repartitions = new[]
         {
-            Rule(pea.Id, wpea.Id, 1.00m, AllocationRuleStatus.Active),
-            Rule(tradeRepublic.Id, techEtf.Id, 0.40m, AllocationRuleStatus.Active),
-            Rule(tradeRepublic.Id, nvidia.Id, 0.25m, AllocationRuleStatus.Active),
-            Rule(tradeRepublic.Id, microsoft.Id, 0.15m, AllocationRuleStatus.Active),
-            Rule(tradeRepublic.Id, amazon.Id, 0.10m, AllocationRuleStatus.Active),
-            Rule(tradeRepublic.Id, apple.Id, 0.10m, AllocationRuleStatus.Active),
-            Rule(tradeRepublic.Id, palantir.Id, 0.00m, AllocationRuleStatus.Frozen),
-            Rule(tradeRepublic.Id, spotify.Id, 0.00m, AllocationRuleStatus.ExitOnly),
-            Rule(tradeRepublic.Id, microStrategy.Id, 0.00m, AllocationRuleStatus.ExitOnly),
-            Rule(tradeRepublic.Id, oracle.Id, 0.00m, AllocationRuleStatus.Frozen)
+            AssetRepartition(pea.Id, wpea.Id, 1.00m, RepartitionStatus.Active),
+            AssetRepartition(tradeRepublic.Id, techEtf.Id, 0.40m, RepartitionStatus.Active),
+            AssetRepartition(tradeRepublic.Id, nvidia.Id, 0.25m, RepartitionStatus.Active),
+            AssetRepartition(tradeRepublic.Id, microsoft.Id, 0.15m, RepartitionStatus.Active),
+            AssetRepartition(tradeRepublic.Id, amazon.Id, 0.10m, RepartitionStatus.Active),
+            AssetRepartition(tradeRepublic.Id, apple.Id, 0.10m, RepartitionStatus.Active),
+            AssetRepartition(tradeRepublic.Id, palantir.Id, 0.00m, RepartitionStatus.Frozen),
+            AssetRepartition(tradeRepublic.Id, spotify.Id, 0.00m, RepartitionStatus.ExitOnly),
+            AssetRepartition(tradeRepublic.Id, microStrategy.Id, 0.00m, RepartitionStatus.ExitOnly),
+            AssetRepartition(tradeRepublic.Id, oracle.Id, 0.00m, RepartitionStatus.Frozen)
         };
 
         var strategyRules = new[]
@@ -90,7 +90,7 @@ public static class TestInvestmentSeedData
             StrategyRule(tradeRepublic.Id, spotify.Id, "Spotify sortie planifiee", "Ligne non strategique.", "Rebond significatif", "Preparer une sortie apres validation humaine.", 40)
         };
 
-        return new TestInvestmentSeed([pea, tradeRepublic], assets, transactions, prices, allocationRules, strategyRules);
+        return new TestInvestmentSeed([pea, tradeRepublic], assets, transactions, prices, repartitions, strategyRules);
     }
 
     private static Asset Asset(Guid id, string name, string symbol, string? isin, AssetType type, string sector, StrategicStatus status) => new()
@@ -128,8 +128,9 @@ public static class TestInvestmentSeedData
         Source = "manual-seed"
     };
 
-    private static AllocationRule Rule(Guid portfolioId, Guid assetId, decimal targetWeight, AllocationRuleStatus status) => new()
+    private static Repartition AssetRepartition(Guid portfolioId, Guid assetId, decimal targetWeight, RepartitionStatus status) => new()
     {
+        Kind = RepartitionKind.PortfolioAsset,
         PortfolioId = portfolioId,
         AssetId = assetId,
         TargetWeight = targetWeight,
@@ -147,6 +148,12 @@ public static class TestInvestmentSeedData
         Priority = priority,
         IsActive = true
     };
+
+    private static Repartition PortfolioRepartition(decimal targetWeight) => new()
+    {
+        Kind = RepartitionKind.Portfolio,
+        TargetWeight = targetWeight
+    };
 }
 
 public sealed record TestInvestmentSeed(
@@ -154,5 +161,5 @@ public sealed record TestInvestmentSeed(
     IReadOnlyList<Asset> Assets,
     IReadOnlyList<Transaction> Transactions,
     IReadOnlyList<AssetPrice> Prices,
-    IReadOnlyList<AllocationRule> AllocationRules,
+    IReadOnlyList<Repartition> Repartitions,
     IReadOnlyList<StrategyRule> StrategyRules);

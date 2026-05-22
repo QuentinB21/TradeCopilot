@@ -1,95 +1,75 @@
 using TradeCopilot.Application.Abstractions;
-using TradeCopilot.Application.Contracts.Imports;
-using TradeCopilot.Application.Services.Imports;
+using TradeCopilot.Application.Contracts.Portfolios;
+using TradeCopilot.Application.Services.Portfolios;
 using TradeCopilot.Domain;
 
 namespace TradeCopilot.Tests;
 
-public sealed class TransactionImportServiceTests
+public sealed class PortfolioServiceTests
 {
     [Fact]
-    public async Task Imports_only_unknown_external_transactions()
+    public async Task Rejects_portfolio_when_global_target_sum_exceeds_one_hundred_percent()
     {
-        var portfolioId = Guid.NewGuid();
-        var repository = new FakeInvestmentRepository(portfolioId, ["known-id"]);
-        var strategy = new FakeImportStrategy([
-            Candidate("known-id"),
-            Candidate("new-id")
+        var repository = new FakeInvestmentRepository([
+            new Portfolio
+            {
+                Id = Guid.NewGuid(),
+                Name = "PEA",
+                Broker = "Broker",
+                BaseCurrency = "EUR",
+                Type = PortfolioType.Pea,
+                Repartitions = [PortfolioRepartition(0.8m)]
+            }
         ]);
-        var service = new TransactionImportService(repository, [strategy]);
+        var service = new PortfolioService(repository);
 
-        var result = await service.ImportAsync(
-            new TransactionImportRequest(TransactionImportProvider.TradeRepublic, portfolioId, "transactions.csv"),
-            new MemoryStream());
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() => service.CreatePortfolioAsync(
+            new CreatePortfolioRequest(
+                "Compte titres",
+                PortfolioType.SecuritiesAccount,
+                "Broker",
+                "EUR",
+                0m,
+                0.3m)));
 
-        Assert.NotNull(result);
-        Assert.Equal(1, result.ImportedTransactions);
-        Assert.Equal(1, result.DuplicateRows);
-        Assert.Single(repository.AddedTransactions);
-        Assert.Equal("new-id", repository.AddedTransactions[0].ExternalId);
+        Assert.Contains("100 %", exception.Message, StringComparison.Ordinal);
+        Assert.Empty(repository.AddedPortfolios);
     }
 
-    private static ImportedTransactionCandidate Candidate(string externalId) => new(
-        2,
-        externalId,
-        TransactionType.Deposit,
-        new DateOnly(2026, 1, 1),
-        1m,
-        100m,
-        0m,
-        "EUR",
-        "test",
-        null);
-
-    private sealed class FakeImportStrategy(IReadOnlyList<ImportedTransactionCandidate> candidates) : ITransactionImportStrategy
+    private sealed class FakeInvestmentRepository(IReadOnlyList<Portfolio> portfolios) : IInvestmentRepository
     {
-        public TransactionImportProvider Provider => TransactionImportProvider.TradeRepublic;
+        public List<Portfolio> AddedPortfolios { get; } = [];
 
-        public Task<TransactionImportParseResult> ParseAsync(Stream stream, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new TransactionImportParseResult(candidates.Count, candidates, []));
-    }
+        public Task<IReadOnlyList<Portfolio>> GetPortfoliosAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(portfolios);
 
-    private sealed class FakeInvestmentRepository(Guid portfolioId, IReadOnlyCollection<string> knownExternalIds) : IInvestmentRepository
-    {
-        public List<Transaction> AddedTransactions { get; } = [];
-
-        public Task<Portfolio?> GetPortfolioByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
-            Task.FromResult<Portfolio?>(id == portfolioId
-                ? new Portfolio { Id = portfolioId, Name = "Trade Republic", Broker = "Trade Republic", BaseCurrency = "EUR", Type = PortfolioType.SecuritiesAccount }
-                : null);
-
-        public Task<IReadOnlySet<string>> GetImportedTransactionExternalIdsAsync(string importSource, CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlySet<string>>(knownExternalIds.ToHashSet(StringComparer.OrdinalIgnoreCase));
-
-        public Task<IReadOnlyList<Asset>> GetAssetsAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<Asset>>([]);
-
-        public Task AddTransactionsAsync(IReadOnlyCollection<Transaction> transactions, CancellationToken cancellationToken = default)
+        public Task AddPortfolioAsync(Portfolio portfolio, CancellationToken cancellationToken = default)
         {
-            AddedTransactions.AddRange(transactions);
+            AddedPortfolios.Add(portfolio);
             return Task.CompletedTask;
         }
 
-        public Task AddAssetAsync(Asset asset, CancellationToken cancellationToken = default) => Task.CompletedTask;
-
-        public Task<IReadOnlyList<Portfolio>> GetPortfoliosAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Portfolio?> GetPortfolioByIdAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<bool> PortfolioHasReferencesAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<IReadOnlyList<Asset>> GetAssetsAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Asset?> GetAssetByIdAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<bool> AssetHasReferencesAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<IReadOnlyList<Transaction>> GetTransactionsAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Transaction?> GetTransactionByIdAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<IReadOnlySet<string>> GetImportedTransactionExternalIdsAsync(string importSource, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<IReadOnlyList<AssetPrice>> GetPricesAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<AssetPrice?> GetPriceByIdAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<IReadOnlyList<Repartition>> GetAssetRepartitionsAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<Repartition?> GetAssetRepartitionByIdAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<IReadOnlyList<StrategyRule>> GetStrategyRulesAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<StrategyRule?> GetStrategyRuleByIdAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task AddPortfolioAsync(Portfolio portfolio, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task UpdatePortfolioAsync(Portfolio portfolio, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task DeletePortfolioAsync(Portfolio portfolio, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task AddAssetAsync(Asset asset, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task UpdateAssetAsync(Asset asset, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task DeleteAssetAsync(Asset asset, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task AddTransactionAsync(Transaction transaction, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task AddTransactionsAsync(IReadOnlyCollection<Transaction> transactions, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task UpdateTransactionAsync(Transaction transaction, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task DeleteTransactionAsync(Transaction transaction, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task AddPriceAsync(AssetPrice price, CancellationToken cancellationToken = default) => throw new NotSupportedException();
@@ -102,4 +82,10 @@ public sealed class TransactionImportServiceTests
         public Task UpdateStrategyRuleAsync(StrategyRule strategyRule, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task DeleteStrategyRuleAsync(StrategyRule strategyRule, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
+
+    private static Repartition PortfolioRepartition(decimal targetWeight) => new()
+    {
+        Kind = RepartitionKind.Portfolio,
+        TargetWeight = targetWeight
+    };
 }

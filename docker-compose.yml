@@ -72,9 +72,59 @@ services:
       timeout: 5s
       retries: 5
 
+  pgadmin:
+    image: dpage/pgadmin4:9.15
+    container_name: tradecopilot-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: dev@example.com
+      PGADMIN_DEFAULT_PASSWORD: tradecopilot_dev_password
+      PGADMIN_DISABLE_POSTFIX: "True"
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+      PGADMIN_REPLACE_SERVERS_ON_STARTUP: "True"
+    ports:
+      - "5050:80"
+    configs:
+      - source: pgadmin-servers
+        target: /pgadmin4/servers.json
+        mode: 0444
+      - source: pgadmin-pgpass
+        target: /config/pgpass
+        uid: "5050"
+        gid: "5050"
+        mode: 0400
+    volumes:
+      - tradecopilot-pgadmin:/var/lib/pgadmin
+    networks:
+      - tradecopilot
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   tradecopilot-postgres:
+  tradecopilot-pgadmin:
 
 networks:
   tradecopilot:
     name: tradecopilot
+
+configs:
+  pgadmin-servers:
+    content: |
+      {
+        "Servers": {
+          "1": {
+            "Name": "TradeCopilot PostgreSQL",
+            "Group": "TradeCopilot",
+            "Host": "postgres",
+            "Port": 5432,
+            "MaintenanceDB": "tradecopilot",
+            "Username": "tradecopilot",
+            "PassFile": "/config/pgpass"
+          }
+        }
+      }
+  pgadmin-pgpass:
+    content: |
+      postgres:5432:*:tradecopilot:tradecopilot_dev_password

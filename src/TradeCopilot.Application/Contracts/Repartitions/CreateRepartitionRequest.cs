@@ -1,11 +1,11 @@
 using TradeCopilot.Domain;
 
-namespace TradeCopilot.Application.Contracts.Allocation;
+namespace TradeCopilot.Application.Contracts.Repartitions;
 
-public sealed record CreateAllocationRuleRequest(
+public sealed record CreateRepartitionRequest(
     Guid PortfolioId,
     Guid AssetId,
     decimal TargetWeight,
     decimal? MinWeight,
     decimal? MaxWeight,
-    AllocationRuleStatus Status);
+    RepartitionStatus Status);

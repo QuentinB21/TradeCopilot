@@ -27,6 +27,7 @@ public sealed class PortfolioService(IInvestmentRepository repository) : IPortfo
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Name);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Broker);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.BaseCurrency);
+        await ValidateTargetWeightAsync(request.TargetWeight, null, cancellationToken);
 
         var portfolio = new Portfolio
         {
@@ -35,7 +36,10 @@ public sealed class PortfolioService(IInvestmentRepository repository) : IPortfo
             Broker = request.Broker.Trim(),
             BaseCurrency = request.BaseCurrency.Trim().ToUpperInvariant(),
             CashBalance = request.CashBalance,
-            TargetWeight = request.TargetWeight
+            Repartitions =
+            [
+                PortfolioRepartition(request.TargetWeight)
+            ]
         };
 
         await repository.AddPortfolioAsync(portfolio, cancellationToken);
@@ -54,12 +58,22 @@ public sealed class PortfolioService(IInvestmentRepository repository) : IPortfo
             return null;
         }
 
+        await ValidateTargetWeightAsync(request.TargetWeight, portfolio.Id, cancellationToken);
+
         portfolio.Name = request.Name.Trim();
         portfolio.Type = request.Type;
         portfolio.Broker = request.Broker.Trim();
         portfolio.BaseCurrency = request.BaseCurrency.Trim().ToUpperInvariant();
         portfolio.CashBalance = request.CashBalance;
-        portfolio.TargetWeight = request.TargetWeight;
+        var repartition = portfolio.Repartitions.SingleOrDefault(candidate => candidate.Kind == RepartitionKind.Portfolio);
+        if (repartition is null)
+        {
+            portfolio.Repartitions.Add(PortfolioRepartition(request.TargetWeight));
+        }
+        else
+        {
+            repartition.TargetWeight = request.TargetWeight;
+        }
 
         await repository.UpdatePortfolioAsync(portfolio, cancellationToken);
         return ToDto(portfolio);
@@ -82,6 +96,23 @@ public sealed class PortfolioService(IInvestmentRepository repository) : IPortfo
         return DeleteEntityResult.Deleted;
     }
 
+    private async Task ValidateTargetWeightAsync(decimal targetWeight, Guid? excludedPortfolioId, CancellationToken cancellationToken)
+    {
+        if (targetWeight is < 0m or > 1m)
+        {
+            throw new ArgumentOutOfRangeException(nameof(targetWeight), "Une cle globale doit rester comprise entre 0 et 100 %.");
+        }
+
+        var existingWeight = (await repository.GetPortfoliosAsync(cancellationToken))
+            .Where(portfolio => portfolio.Id != excludedPortfolioId)
+            .Sum(portfolio => portfolio.TargetWeight);
+
+        if (existingWeight + targetWeight > 1.000001m)
+        {
+            throw new ArgumentException("La somme des cles globales des portefeuilles ne peut pas depasser 100 %.", nameof(targetWeight));
+        }
+    }
+
     private static PortfolioDto ToDto(Portfolio portfolio) => new(
         portfolio.Id,
         portfolio.Name,
@@ -90,4 +121,10 @@ public sealed class PortfolioService(IInvestmentRepository repository) : IPortfo
         portfolio.BaseCurrency,
         portfolio.CashBalance,
         portfolio.TargetWeight);
+
+    private static Repartition PortfolioRepartition(decimal targetWeight) => new()
+    {
+        Kind = RepartitionKind.Portfolio,
+        TargetWeight = targetWeight
+    };
 }

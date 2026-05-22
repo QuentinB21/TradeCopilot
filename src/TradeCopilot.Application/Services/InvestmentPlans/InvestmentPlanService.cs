@@ -14,9 +14,9 @@ public sealed class InvestmentPlanService(
         var assets = await repository.GetAssetsAsync(cancellationToken);
         var transactions = await repository.GetTransactionsAsync(cancellationToken);
         var prices = await repository.GetPricesAsync(cancellationToken);
-        var allocationRules = await repository.GetAllocationRulesAsync(cancellationToken);
-        var positions = positionCalculator.Calculate(portfolios, assets, transactions, prices, allocationRules);
+        var repartitions = await repository.GetAssetRepartitionsAsync(cancellationToken);
+        var positions = positionCalculator.Calculate(portfolios, assets, transactions, prices, repartitions);
 
-        return monthlyInvestmentPlanner.BuildPlan(request.Amount, portfolios, assets, positions, allocationRules);
+        return monthlyInvestmentPlanner.BuildPlan(request.Amount, portfolios, assets, positions, repartitions);
     }
 }

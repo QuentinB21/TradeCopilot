@@ -28,6 +28,7 @@ public sealed class AssetService(IInvestmentRepository repository) : IAssetServi
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Name);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Symbol);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Currency);
+        ValidateStrategicStatus(request.StrategicStatus);
 
         var asset = new Asset
         {
@@ -52,6 +53,7 @@ public sealed class AssetService(IInvestmentRepository repository) : IAssetServi
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Name);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Symbol);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Currency);
+        ValidateStrategicStatus(request.StrategicStatus);
 
         var asset = await repository.GetAssetByIdAsync(id, cancellationToken);
         if (asset is null)
@@ -122,4 +124,12 @@ public sealed class AssetService(IInvestmentRepository repository) : IAssetServi
 
     private static string? NormalizeMarketSymbol(string? marketSymbol) =>
         string.IsNullOrWhiteSpace(marketSymbol) ? null : marketSymbol.Trim().ToUpperInvariant();
+
+    private static void ValidateStrategicStatus(StrategicStatus strategicStatus)
+    {
+        if (strategicStatus is not (StrategicStatus.Core or StrategicStatus.Conviction or StrategicStatus.Observation or StrategicStatus.PlannedExit))
+        {
+            throw new ArgumentException("Le role strategique d'un actif doit etre Noyau, Conviction, Observation ou A ceder.", nameof(strategicStatus));
+        }
+    }
 }

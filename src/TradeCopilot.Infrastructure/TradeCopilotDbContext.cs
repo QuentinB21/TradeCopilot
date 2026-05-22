@@ -9,10 +9,8 @@ public sealed class TradeCopilotDbContext(DbContextOptions<TradeCopilotDbContext
     public DbSet<Asset> Assets => Set<Asset>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<AssetPrice> AssetPrices => Set<AssetPrice>();
-    public DbSet<AllocationRule> AllocationRules => Set<AllocationRule>();
+    public DbSet<Repartition> Repartitions => Set<Repartition>();
     public DbSet<StrategyRule> StrategyRules => Set<StrategyRule>();
-    public DbSet<Report> Reports => Set<Report>();
-    public DbSet<InvestmentJournalEntry> InvestmentJournalEntries => Set<InvestmentJournalEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -22,7 +20,6 @@ public sealed class TradeCopilotDbContext(DbContextOptions<TradeCopilotDbContext
             entity.Property(portfolio => portfolio.Broker).HasMaxLength(120);
             entity.Property(portfolio => portfolio.BaseCurrency).HasMaxLength(3);
             entity.Property(portfolio => portfolio.CashBalance).HasPrecision(18, 4);
-            entity.Property(portfolio => portfolio.TargetWeight).HasPrecision(9, 6);
         });
 
         modelBuilder.Entity<Asset>(entity =>
@@ -79,27 +76,46 @@ public sealed class TradeCopilotDbContext(DbContextOptions<TradeCopilotDbContext
             entity.Property(price => price.RetrievedAt);
         });
 
-        modelBuilder.Entity<AllocationRule>(entity =>
+        modelBuilder.Entity<Repartition>(entity =>
         {
-            entity.HasOne(rule => rule.Portfolio)
-                .WithMany(portfolio => portfolio.AllocationRules)
-                .HasForeignKey(rule => rule.PortfolioId)
-                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(repartition => repartition.Portfolio)
+                .WithMany(portfolio => portfolio.Repartitions)
+                .HasForeignKey(repartition => repartition.PortfolioId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasOne(rule => rule.Asset)
+            entity.HasOne(repartition => repartition.Asset)
                 .WithMany()
-                .HasForeignKey(rule => rule.AssetId)
+                .HasForeignKey(repartition => repartition.AssetId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            entity.HasIndex(rule => new { rule.PortfolioId, rule.AssetId }).IsUnique();
-            entity.Property(rule => rule.TargetWeight).HasPrecision(9, 6);
-            entity.Property(rule => rule.MinWeight).HasPrecision(9, 6);
-            entity.Property(rule => rule.MaxWeight).HasPrecision(9, 6);
-        });
-
-        modelBuilder.Entity<Report>(entity =>
-        {
-            entity.Property(report => report.ContentJson).HasColumnType("jsonb");
+            entity.HasIndex(repartition => repartition.PortfolioId)
+                .IsUnique()
+                .HasFilter("\"Kind\" = 0");
+            entity.HasIndex(repartition => new { repartition.PortfolioId, repartition.AssetId })
+                .IsUnique()
+                .HasFilter("\"AssetId\" IS NOT NULL");
+            entity.Property(repartition => repartition.TargetWeight).HasPrecision(9, 6);
+            entity.Property(repartition => repartition.MinWeight).HasPrecision(9, 6);
+            entity.Property(repartition => repartition.MaxWeight).HasPrecision(9, 6);
+            entity.ToTable(table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_Repartitions_Kind",
+                    """
+                    ("Kind" = 0 AND "AssetId" IS NULL AND "Status" IS NULL)
+                    OR ("Kind" = 1 AND "AssetId" IS NOT NULL AND "Status" IS NOT NULL)
+                    """);
+                table.HasCheckConstraint(
+                    "CK_Repartitions_WeightRange",
+                    """
+                    "TargetWeight" BETWEEN 0 AND 1
+                    AND ("MinWeight" IS NULL OR "MinWeight" BETWEEN 0 AND 1)
+                    AND ("MaxWeight" IS NULL OR "MaxWeight" BETWEEN 0 AND 1)
+                    AND ("MinWeight" IS NULL OR "MinWeight" <= "TargetWeight")
+                    AND ("MaxWeight" IS NULL OR "TargetWeight" <= "MaxWeight")
+                    AND ("MinWeight" IS NULL OR "MaxWeight" IS NULL OR "MinWeight" <= "MaxWeight")
+                    """);
+            });
         });
 
         modelBuilder.Entity<StrategyRule>(entity =>

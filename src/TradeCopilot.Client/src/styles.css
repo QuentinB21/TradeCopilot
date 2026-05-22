@@ -638,35 +638,6 @@ th,
   align-items: start;
 }
 
-.strategyOverview {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.strategyOverview article {
-  min-height: 116px;
-  display: grid;
-  gap: 6px;
-  align-content: space-between;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--paper);
-  box-shadow: var(--shadow);
-  padding: 18px;
-}
-
-.strategyOverview span,
-.strategyOverview small {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.strategyOverview strong {
-  font-size: 30px;
-  line-height: 1;
-}
-
 .strategySectionNav {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -789,6 +760,11 @@ th,
   line-height: 1;
 }
 
+.strategyWeightSummary.warning strong,
+.strategyWeightSummary.warning span {
+  color: var(--warning);
+}
+
 .strategySectionPanel {
   gap: 16px;
 }
@@ -855,6 +831,20 @@ th,
 .allocationGauge strong {
   font-size: 24px;
   line-height: 1;
+}
+
+.allocationGauge.warning {
+  border-color: #f2d093;
+  background: var(--warning-soft);
+}
+
+.allocationGauge.warning strong,
+.allocationWarning {
+  color: var(--warning);
+}
+
+.allocationGauge .allocationWarning {
+  font-weight: 650;
 }
 
 .watchList {
@@ -1604,17 +1594,27 @@ tbody tr:last-child td {
 }
 
 .editingBadge {
-  min-height: 26px;
-  display: inline-grid;
-  place-items: center;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid rgba(21, 94, 239, 0.22);
   border-radius: 999px;
   background: rgba(21, 94, 239, 0.1);
   color: var(--focus);
-  padding: 0 9px;
+  box-sizing: border-box;
+  padding: 1px 9px 0;
   font-size: 11px;
   font-weight: 700;
+  line-height: 1;
   white-space: nowrap;
+}
+
+.rowActions > .editingBadge,
+.rowEnd > .editingBadge {
+  display: inline-flex;
+  color: var(--focus);
+  line-height: 1;
 }
 
 .positive {
@@ -1690,8 +1690,7 @@ tbody tr:last-child td {
     text-align: center;
   }
 
-  .dashboardMetrics,
-  .strategyOverview {
+  .dashboardMetrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 

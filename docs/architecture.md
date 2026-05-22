@@ -14,7 +14,7 @@ Le PDF `Outil_de_suivi_dinvestissements.pdf` est la source de verite. Le MVP cou
 
 ## Modules de code
 
-- `Domain` : objets metier stables, sans dependance technique. Les entites et enums sont decoupes par domaine (`Portfolios`, `Assets`, `Transactions`, `Prices`, `Allocation`, `Strategy`, `Reporting`, `Journal`).
+- `Domain` : objets metier stables, sans dependance technique. Les entites et enums sont decoupes par domaine (`Portfolios`, `Assets`, `Transactions`, `Prices`, `Allocation`, `Strategy`).
 - `Application` : contrats DTO, interfaces de services, cas d'usage, calculs purs et recommandations.
 - `Infrastructure` : implementation EF Core des repositories et initialisation DB.
 - `Api` : controllers REST par ressource, configuration du pipeline et composition racine.
@@ -36,7 +36,7 @@ Exemples actuels :
 - `TransactionImportsController` -> `ITransactionImportService` -> `ITransactionImportStrategy` -> `IInvestmentRepository`.
 - `PricesController` -> `IPriceService` -> `IInvestmentRepository`.
 - `MarketDataController` -> `IMarketDataService` -> `IMarketDataProvider`.
-- `AllocationRulesController` -> `IAllocationRuleService` -> `IInvestmentRepository`.
+- `RepartitionsController` -> `IRepartitionService` -> `IInvestmentRepository`.
 - `StrategyRulesController` -> `IStrategyRuleService` -> `IInvestmentRepository`.
 - `DashboardController` -> `IDashboardQueryService` -> calculs applicatifs + repository.
 - `MonthlyPlanController` -> `IInvestmentPlanService` -> calculs applicatifs + repository.

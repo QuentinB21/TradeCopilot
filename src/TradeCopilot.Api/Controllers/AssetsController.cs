@@ -26,15 +26,29 @@ public sealed class AssetsController(IAssetService assetService) : ControllerBas
     [HttpPost]
     public async Task<ActionResult<AssetDto>> CreateAsset(CreateAssetRequest request, CancellationToken cancellationToken)
     {
-        var asset = await assetService.CreateAssetAsync(request, cancellationToken);
-        return CreatedAtAction(nameof(GetAsset), new { id = asset.Id }, asset);
+        try
+        {
+            var asset = await assetService.CreateAssetAsync(request, cancellationToken);
+            return CreatedAtAction(nameof(GetAsset), new { id = asset.Id }, asset);
+        }
+        catch (ArgumentException exception)
+        {
+            return BadRequest(exception.Message);
+        }
     }
 
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<AssetDto>> UpdateAsset(Guid id, UpdateAssetRequest request, CancellationToken cancellationToken)
     {
-        var asset = await assetService.UpdateAssetAsync(id, request, cancellationToken);
-        return asset is null ? NotFound() : Ok(asset);
+        try
+        {
+            var asset = await assetService.UpdateAssetAsync(id, request, cancellationToken);
+            return asset is null ? NotFound() : Ok(asset);
+        }
+        catch (ArgumentException exception)
+        {
+            return BadRequest(exception.Message);
+        }
     }
 
     [HttpPut("{id:guid}/market-binding")]

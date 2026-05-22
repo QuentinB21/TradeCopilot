@@ -121,6 +121,11 @@ export function TransactionsPage() {
   };
 
   const editTransaction = (transaction: Transaction) => {
+    if (editingId === transaction.id) {
+      resetForm();
+      return;
+    }
+
     setEditingId(transaction.id);
     setForm({
       portfolioId: transaction.portfolioId,

@@ -44,6 +44,7 @@ Services inclus :
 - API ASP.NET Core : route `http://localhost/api/*`
 - Swagger API : [http://localhost/swagger](http://localhost/swagger)
 - PostgreSQL : port local `5432`
+- pgAdmin : [http://localhost:5050](http://localhost:5050), connexion PostgreSQL TradeCopilot preconfiguree
 
 Traefik utilise un provider fichier dans `infra/traefik/dynamic.yml` au lieu du provider Docker. Cela evite les problemes de socket Docker Desktop sous Windows tout en gardant un routage automatique via les noms de services Compose.
 
@@ -73,7 +74,7 @@ Endpoints utiles :
 - `GET /api/positions`
 - `POST /api/monthly-plan` avec `{ "amount": 400 }`
 - `GET /api/strategy`
-- `GET|POST|PUT|DELETE /api/allocation-rules`
+- `GET|POST|PUT|DELETE /api/repartitions`
 - `GET|POST|PUT|DELETE /api/strategy-rules`
 - `GET|POST|PUT|DELETE /api/transactions`
 - `POST /api/transaction-imports` en `multipart/form-data` avec `provider`, `portfolioId`, `file`
@@ -121,6 +122,8 @@ docker compose up -d postgres
 ```
 
 La chaine de connexion par defaut est configuree dans `src/TradeCopilot.Api/appsettings.Development.json`. Au demarrage, l'API cree le schema avec EF Core si necessaire. Aucune donnee de demo n'est inseree en environnement applicatif.
+
+pgAdmin est inclus dans la stack Docker de developpement. Ouvre `http://localhost:5050`, puis developpe le serveur `TradeCopilot PostgreSQL` deja enregistre pour consulter `Databases > tradecopilot > Schemas > public > Tables`. La configuration pgAdmin utilise le mot de passe PostgreSQL local du Compose uniquement pour eviter une saisie manuelle en environnement de developpement.
 
 Pour repartir d'une base locale vide :
 

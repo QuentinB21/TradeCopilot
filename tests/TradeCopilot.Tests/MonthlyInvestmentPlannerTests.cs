@@ -14,14 +14,14 @@ public sealed class MonthlyInvestmentPlannerTests
             seed.Assets,
             seed.Transactions,
             seed.Prices,
-            seed.AllocationRules);
+            seed.Repartitions);
 
         var plan = new MonthlyInvestmentPlanner().BuildPlan(
             400m,
             seed.Portfolios,
             seed.Assets,
             positions,
-            seed.AllocationRules);
+            seed.Repartitions);
 
         Assert.Equal(400m, plan.Amount);
         Assert.Contains(plan.Envelopes, envelope => envelope.PortfolioName == "PEA BoursoBank" && envelope.Amount == 320m);

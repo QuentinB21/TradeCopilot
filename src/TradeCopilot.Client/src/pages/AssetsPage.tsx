@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { tradeCopilotApi } from "../api/tradeCopilotApi";
 import { ActionIconButton } from "../components/ActionIconButton";
-import { assetTypes, strategicStatuses } from "../domain/options";
+import { assetTypeOptions, formatAssetType, formatStrategicStatus, strategicStatusOptions } from "../domain/options";
 import type { Asset, CreateAssetPayload, InstrumentSearchResult } from "../domain/types";
 import { PageHeader } from "../components/PageHeader";
 import { Panel } from "../components/Panel";
@@ -70,6 +70,12 @@ export function AssetsPage() {
   });
 
   function edit(asset: Asset) {
+    if (editingId === asset.id) {
+      setEditingId(null);
+      setForm(emptyAsset);
+      return;
+    }
+
     setEditingId(asset.id);
     setForm({
       name: asset.name,
@@ -113,10 +119,10 @@ export function AssetsPage() {
             <label>Nom<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required /></label>
             <label>Symbole<input value={form.symbol} onChange={(event) => setForm({ ...form, symbol: event.target.value })} required /></label>
             <label>ISIN<input value={form.isin ?? ""} onChange={(event) => setForm({ ...form, isin: event.target.value || null })} /></label>
-            <label>Type<select value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value as CreateAssetPayload["type"] })}>{assetTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
+            <label>Nature<select value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value as CreateAssetPayload["type"] })}>{assetTypeOptions.map((type) => <option value={type.value} key={type.value}>{type.label}</option>)}</select></label>
             <label>Devise<input value={form.currency} onChange={(event) => setForm({ ...form, currency: event.target.value })} required maxLength={3} /></label>
             <label>Secteur<input value={form.sector ?? ""} onChange={(event) => setForm({ ...form, sector: event.target.value || null })} /></label>
-            <label>Statut<select value={form.strategicStatus} onChange={(event) => setForm({ ...form, strategicStatus: event.target.value as CreateAssetPayload["strategicStatus"] })}>{strategicStatuses.map((status) => <option key={status}>{status}</option>)}</select></label>
+            <label>Role strategique<select value={form.strategicStatus} onChange={(event) => setForm({ ...form, strategicStatus: event.target.value as CreateAssetPayload["strategicStatus"] })}>{strategicStatusOptions.map((status) => <option value={status.value} key={status.value}>{status.label}</option>)}</select></label>
             <div className="formActions">
               <button type="submit">{editingId ? "Enregistrer" : "Creer"}</button>
               {editingId ? <button className="secondaryButton" type="button" onClick={() => { setEditingId(null); setForm(emptyAsset); }}>Annuler</button> : null}
@@ -128,14 +134,14 @@ export function AssetsPage() {
           <QueryState isLoading={assetsQuery.isLoading} error={assetsQuery.error}>
             <div className="tableWrap compactTable">
               <table>
-                <thead><tr><th>Actif</th><th>Cotation liee</th><th>Type</th><th>Statut</th><th></th></tr></thead>
+                <thead><tr><th>Actif</th><th>Cotation liee</th><th>Nature</th><th>Role strategique</th><th></th></tr></thead>
                 <tbody>
                   {(assetsQuery.data ?? []).map((asset) => (
                     <tr className={editingId === asset.id ? "editingRow" : undefined} key={asset.id}>
                       <td><strong>{asset.name}</strong><span>{asset.symbol}</span></td>
                       <td>{asset.marketSymbol ? <><strong>{asset.marketSymbol}</strong><span>{asset.priceProvider ?? "Source auto"}</span></> : <span>A lier si le cours manque</span>}</td>
-                      <td>{asset.type}</td>
-                      <td><span className="status">{asset.strategicStatus}</span></td>
+                      <td>{formatAssetType(asset.type)}</td>
+                      <td><span className="status">{formatStrategicStatus(asset.strategicStatus)}</span></td>
                       <td>
                         <div className="rowActions">
                           {editingId === asset.id ? <span className="editingBadge">En edition</span> : null}

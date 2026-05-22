@@ -2,7 +2,7 @@ import { deleteJson, getJson, postForm, postJson, putJson } from "./client";
 import type {
   Asset,
   CreateAssetPayload,
-  CreateAllocationRulePayload,
+  CreateRepartitionPayload,
   CreatePortfolioPayload,
   CreateStrategyRulePayload,
   CreateTransactionPayload,
@@ -13,12 +13,12 @@ import type {
   Portfolio,
   Position,
   Strategy,
-  AllocationRule,
+  Repartition,
   StrategyRule,
   Transaction,
   TransactionImportProvider,
   TransactionImportResult,
-  UpdateAllocationRulePayload,
+  UpdateRepartitionPayload,
   UpdateTransactionPayload
 } from "../domain/types";
 
@@ -48,10 +48,10 @@ export const tradeCopilotApi = {
     body.append("file", file);
     return postForm<TransactionImportResult>("/api/transaction-imports", body);
   },
-  getAllocationRules: () => getJson<AllocationRule[]>("/api/allocation-rules"),
-  createAllocationRule: (payload: CreateAllocationRulePayload) => postJson<AllocationRule>("/api/allocation-rules", payload),
-  updateAllocationRule: (id: string, payload: UpdateAllocationRulePayload) => putJson<AllocationRule>(`/api/allocation-rules/${id}`, payload),
-  deleteAllocationRule: (id: string) => deleteJson(`/api/allocation-rules/${id}`),
+  getRepartitions: () => getJson<Repartition[]>("/api/repartitions"),
+  createRepartition: (payload: CreateRepartitionPayload) => postJson<Repartition>("/api/repartitions", payload),
+  updateRepartition: (id: string, payload: UpdateRepartitionPayload) => putJson<Repartition>(`/api/repartitions/${id}`, payload),
+  deleteRepartition: (id: string) => deleteJson(`/api/repartitions/${id}`),
   createMonthlyPlan: (amount: number) => postJson<MonthlyInvestmentPlan>("/api/monthly-plan", { amount }),
   getStrategy: () => getJson<Strategy>("/api/strategy"),
   getStrategyRules: () => getJson<StrategyRule[]>("/api/strategy-rules"),

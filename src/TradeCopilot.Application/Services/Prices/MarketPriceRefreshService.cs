@@ -117,7 +117,7 @@ public sealed class MarketPriceRefreshService(
             cancellationToken.ThrowIfCancellationRequested();
 
             var from = firstTransactionDateByAssetId[asset.Id];
-            if (from > lastClosedDate || HasUsefulHistoricalCoverage(asset.Id, from, lastClosedDate, refreshedPrices))
+            if (from >= lastClosedDate || HasUsefulHistoricalCoverage(asset.Id, from, lastClosedDate, refreshedPrices))
             {
                 continue;
             }

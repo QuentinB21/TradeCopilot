@@ -3,8 +3,8 @@ import { useMemo, useState } from "react";
 import { tradeCopilotApi } from "../api/tradeCopilotApi";
 import { ActionIconButton } from "../components/ActionIconButton";
 import { DecimalInput } from "../components/DecimalInput";
-import { allocationRuleStatuses, assetTypes, portfolioTypes, strategicStatuses } from "../domain/options";
-import type { AllocationRule, Asset, CreateAllocationRulePayload, CreateAssetPayload, CreatePortfolioPayload, CreateStrategyRulePayload, Portfolio, StrategyRule, UpdateAllocationRulePayload } from "../domain/types";
+import { assetTypeOptions, formatRepartitionStatus, formatStrategicStatus, portfolioTypes, repartitionStatusOptions, strategicStatusOptions } from "../domain/options";
+import type { Asset, CreateAssetPayload, CreatePortfolioPayload, CreateRepartitionPayload, CreateStrategyRulePayload, Portfolio, Repartition, StrategyRule, UpdateRepartitionPayload } from "../domain/types";
 import { formatPercent } from "../lib/format";
 import { parseDecimalInput, parseNullableDecimalInput, toNumberInput } from "../lib/numberInput";
 import { PageHeader } from "../components/PageHeader";
@@ -16,7 +16,7 @@ type PortfolioForm = Omit<CreatePortfolioPayload, "cashBalance" | "targetWeight"
   targetWeight: string;
 };
 
-type AllocationRuleForm = Omit<CreateAllocationRulePayload, "targetWeight" | "minWeight" | "maxWeight"> & {
+type RepartitionForm = Omit<CreateRepartitionPayload, "targetWeight" | "minWeight" | "maxWeight"> & {
   targetWeight: string;
   minWeight: string;
   maxWeight: string;
@@ -59,7 +59,7 @@ const emptyAsset: CreateAssetPayload = {
   strategicStatus: "Conviction"
 };
 
-const emptyAllocationRule: AllocationRuleForm = {
+const emptyRepartition: RepartitionForm = {
   portfolioId: "",
   assetId: "",
   targetWeight: "",
@@ -87,15 +87,15 @@ export function StrategyPage() {
   const queryClient = useQueryClient();
   const portfoliosQuery = useQuery({ queryKey: ["portfolios"], queryFn: tradeCopilotApi.getPortfolios });
   const assetsQuery = useQuery({ queryKey: ["assets"], queryFn: tradeCopilotApi.getAssets });
-  const allocationRulesQuery = useQuery({ queryKey: ["allocation-rules"], queryFn: tradeCopilotApi.getAllocationRules });
+  const repartitionsQuery = useQuery({ queryKey: ["repartitions"], queryFn: tradeCopilotApi.getRepartitions });
   const strategyRulesQuery = useQuery({ queryKey: ["strategy-rules"], queryFn: tradeCopilotApi.getStrategyRules });
   const [portfolioForm, setPortfolioForm] = useState<PortfolioForm>(emptyPortfolio);
   const [assetForm, setAssetForm] = useState<CreateAssetPayload>(emptyAsset);
-  const [allocationForm, setAllocationForm] = useState<AllocationRuleForm>(emptyAllocationRule);
+  const [repartitionForm, setRepartitionForm] = useState<RepartitionForm>(emptyRepartition);
   const [strategyRuleForm, setStrategyRuleForm] = useState<StrategyRuleForm>(emptyStrategyRule);
   const [editingPortfolioId, setEditingPortfolioId] = useState<string | null>(null);
   const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
-  const [editingAllocationRuleId, setEditingAllocationRuleId] = useState<string | null>(null);
+  const [editingRepartitionId, setEditingRepartitionId] = useState<string | null>(null);
   const [editingStrategyRuleId, setEditingStrategyRuleId] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<StrategySection>("overview");
   const [activeEditor, setActiveEditor] = useState<StrategyEditor>(null);
@@ -105,22 +105,37 @@ export function StrategyPage() {
   const assets = assetsQuery.data ?? [];
   const portfolioById = useMemo(() => new Map(portfolios.map((portfolio) => [portfolio.id, portfolio])), [portfolios]);
   const assetById = useMemo(() => new Map(assets.map((asset) => [asset.id, asset])), [assets]);
-  const allocationRules = allocationRulesQuery.data ?? [];
+  const repartitions = repartitionsQuery.data ?? [];
   const strategyRules = strategyRulesQuery.data ?? [];
   const selectedAllocationPortfolioId = portfolioById.has(allocationPortfolioId)
     ? allocationPortfolioId
     : portfolios[0]?.id ?? "";
   const selectedAllocationPortfolio = portfolioById.get(selectedAllocationPortfolioId);
-  const visibleAllocationRules = allocationRules.filter((rule) => rule.portfolioId === selectedAllocationPortfolioId);
-  const visibleAllocationWeight = visibleAllocationRules.reduce((total, rule) => total + rule.targetWeight, 0);
+  const visibleRepartitions = repartitions.filter((repartition) => repartition.portfolioId === selectedAllocationPortfolioId);
+  const visibleAllocationWeight = visibleRepartitions.reduce((total, repartition) => total + repartition.targetWeight, 0);
+  const isAllocationWeightOverTarget = visibleAllocationWeight > 1.000001;
+  const allocationTargetWeight = parseDecimalInput(repartitionForm.targetWeight);
+  const isAllocationTargetWeightInvalid = allocationTargetWeight > 1;
+  const projectedAllocationWeight = repartitions
+    .filter((repartition) => repartition.portfolioId === repartitionForm.portfolioId && repartition.id !== editingRepartitionId)
+    .reduce((total, repartition) => total + repartition.targetWeight, allocationTargetWeight);
+  const isProjectedAllocationWeightInvalid = Boolean(repartitionForm.portfolioId)
+    && projectedAllocationWeight > 1.000001;
   const totalPortfolioWeight = portfolios.reduce((total, portfolio) => total + portfolio.targetWeight, 0);
+  const portfolioTargetWeight = parseDecimalInput(portfolioForm.targetWeight);
+  const isPortfolioTargetWeightInvalid = portfolioTargetWeight > 1;
+  const projectedPortfolioWeight = portfolios
+    .filter((portfolio) => portfolio.id !== editingPortfolioId)
+    .reduce((total, portfolio) => total + portfolio.targetWeight, portfolioTargetWeight);
+  const isProjectedPortfolioWeightInvalid = projectedPortfolioWeight > 1.000001;
+  const isPortfolioWeightOverTarget = totalPortfolioWeight > 1.000001;
   const activeRulesCount = strategyRules.filter((rule) => rule.isActive).length;
 
   const invalidateConfiguration = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["portfolios"] }),
       queryClient.invalidateQueries({ queryKey: ["assets"] }),
-      queryClient.invalidateQueries({ queryKey: ["allocation-rules"] }),
+      queryClient.invalidateQueries({ queryKey: ["repartitions"] }),
       queryClient.invalidateQueries({ queryKey: ["strategy-rules"] }),
       queryClient.invalidateQueries({ queryKey: ["strategy"] }),
       queryClient.invalidateQueries({ queryKey: ["dashboard"] })
@@ -133,6 +148,11 @@ export function StrategyPage() {
   };
 
   const editPortfolio = (portfolio: Portfolio) => {
+    if (activeEditor === "portfolio" && editingPortfolioId === portfolio.id) {
+      activateEditor(null);
+      return;
+    }
+
     activateEditor("portfolio");
     setActiveSection("portfolios");
     setEditingPortfolioId(portfolio.id);
@@ -152,6 +172,11 @@ export function StrategyPage() {
   };
 
   const editAsset = (asset: Asset) => {
+    if (activeEditor === "asset" && editingAssetId === asset.id) {
+      activateEditor(null);
+      return;
+    }
+
     activateEditor("asset");
     setActiveSection("assets");
     setEditingAssetId(asset.id);
@@ -169,23 +194,28 @@ export function StrategyPage() {
     });
   };
 
-  const resetAllocationForm = () => {
-    setAllocationForm(emptyAllocationRule);
-    setEditingAllocationRuleId(null);
+  const resetRepartitionForm = () => {
+    setRepartitionForm(emptyRepartition);
+    setEditingRepartitionId(null);
   };
 
-  const editAllocationRule = (rule: AllocationRule) => {
+  const editRepartition = (repartition: Repartition) => {
+    if (activeEditor === "allocation" && editingRepartitionId === repartition.id) {
+      activateEditor(null);
+      return;
+    }
+
     activateEditor("allocation");
     setActiveSection("allocation");
-    setAllocationPortfolioId(rule.portfolioId);
-    setEditingAllocationRuleId(rule.id);
-    setAllocationForm({
-      portfolioId: rule.portfolioId,
-      assetId: rule.assetId,
-      targetWeight: toNumberInput(rule.targetWeight),
-      minWeight: toNumberInput(rule.minWeight),
-      maxWeight: toNumberInput(rule.maxWeight),
-      status: rule.status
+    setAllocationPortfolioId(repartition.portfolioId);
+    setEditingRepartitionId(repartition.id);
+    setRepartitionForm({
+      portfolioId: repartition.portfolioId,
+      assetId: repartition.assetId,
+      targetWeight: toNumberInput(repartition.targetWeight),
+      minWeight: toNumberInput(repartition.minWeight),
+      maxWeight: toNumberInput(repartition.maxWeight),
+      status: repartition.status
     });
   };
 
@@ -204,7 +234,7 @@ export function StrategyPage() {
     }
 
     if (editor !== "allocation") {
-      resetAllocationForm();
+      resetRepartitionForm();
     }
 
     if (editor !== "rule") {
@@ -225,17 +255,11 @@ export function StrategyPage() {
     setActiveSection("portfolios");
   };
 
-  const createAsset = () => {
-    resetAssetForm();
-    activateEditor("asset");
-    setActiveSection("assets");
-  };
-
-  const createAllocationRule = () => {
-    resetAllocationForm();
+  const createRepartition = () => {
+    resetRepartitionForm();
     activateEditor("allocation");
     setActiveSection("allocation");
-    setAllocationForm({ ...emptyAllocationRule, portfolioId: selectedAllocationPortfolioId });
+    setRepartitionForm({ ...emptyRepartition, portfolioId: selectedAllocationPortfolioId });
   };
 
   const createStrategyRule = () => {
@@ -245,6 +269,11 @@ export function StrategyPage() {
   };
 
   const editStrategyRule = (rule: StrategyRule) => {
+    if (activeEditor === "rule" && editingStrategyRuleId === rule.id) {
+      activateEditor(null);
+      return;
+    }
+
     activateEditor("rule");
     setActiveSection("rules");
     setEditingStrategyRuleId(rule.id);
@@ -289,33 +318,33 @@ export function StrategyPage() {
     }
   });
   const deleteAsset = useMutation({ mutationFn: tradeCopilotApi.deleteAsset, onSuccess: invalidateConfiguration });
-  const saveAllocationRule = useMutation({
+  const saveRepartition = useMutation({
     mutationFn: () => {
-      const createPayload: CreateAllocationRulePayload = {
-        ...allocationForm,
-        targetWeight: parseDecimalInput(allocationForm.targetWeight),
-        minWeight: parseNullableDecimalInput(allocationForm.minWeight),
-        maxWeight: parseNullableDecimalInput(allocationForm.maxWeight)
+      const createPayload: CreateRepartitionPayload = {
+        ...repartitionForm,
+        targetWeight: parseDecimalInput(repartitionForm.targetWeight),
+        minWeight: parseNullableDecimalInput(repartitionForm.minWeight),
+        maxWeight: parseNullableDecimalInput(repartitionForm.maxWeight)
       };
-      if (!editingAllocationRuleId) {
-        return tradeCopilotApi.createAllocationRule(createPayload);
+      if (!editingRepartitionId) {
+        return tradeCopilotApi.createRepartition(createPayload);
       }
 
-      const updatePayload: UpdateAllocationRulePayload = {
-        targetWeight: parseDecimalInput(allocationForm.targetWeight),
-        minWeight: parseNullableDecimalInput(allocationForm.minWeight),
-        maxWeight: parseNullableDecimalInput(allocationForm.maxWeight),
-        status: allocationForm.status
+      const updatePayload: UpdateRepartitionPayload = {
+        targetWeight: parseDecimalInput(repartitionForm.targetWeight),
+        minWeight: parseNullableDecimalInput(repartitionForm.minWeight),
+        maxWeight: parseNullableDecimalInput(repartitionForm.maxWeight),
+        status: repartitionForm.status
       };
-      return tradeCopilotApi.updateAllocationRule(editingAllocationRuleId, updatePayload);
+      return tradeCopilotApi.updateRepartition(editingRepartitionId, updatePayload);
     },
     onSuccess: async () => {
-      resetAllocationForm();
+      resetRepartitionForm();
       setActiveEditor(null);
       await invalidateConfiguration();
     }
   });
-  const deleteAllocationRule = useMutation({ mutationFn: tradeCopilotApi.deleteAllocationRule, onSuccess: invalidateConfiguration });
+  const deleteRepartition = useMutation({ mutationFn: tradeCopilotApi.deleteRepartition, onSuccess: invalidateConfiguration });
   const saveStrategyRule = useMutation({
     mutationFn: () => {
       const payload: CreateStrategyRulePayload = {
@@ -340,29 +369,6 @@ export function StrategyPage() {
         title="Configuration strategie"
         description="Parametrage initial : enveloppes, actifs, cles de repartition et regles qui structurent le pilotage."
       />
-
-      <section className="strategyOverview">
-        <article>
-          <span>Portefeuilles</span>
-          <strong>{portfolios.length}</strong>
-          <small>Cles globales</small>
-        </article>
-        <article>
-          <span>Actifs</span>
-          <strong>{assets.length}</strong>
-          <small>Statuts strategiques</small>
-        </article>
-        <article>
-          <span>Cles par ligne</span>
-          <strong>{allocationRulesQuery.data?.length ?? 0}</strong>
-          <small>Ponderations cibles</small>
-        </article>
-        <article>
-          <span>Regles</span>
-          <strong>{strategyRulesQuery.data?.length ?? 0}</strong>
-          <small>Decisions explicites</small>
-        </article>
-      </section>
 
       <nav className="strategySectionNav" aria-label="Configuration de la strategie">
         {strategySections.map((section) => (
@@ -398,9 +404,9 @@ export function StrategyPage() {
                 onAction={() => openSection("assets")}
               />
               <StrategyChecklistItem
-                isReady={allocationRules.length > 0}
+                isReady={repartitions.length > 0}
                 label="Repartition"
-                detail={allocationRules.length > 0 ? `${allocationRules.length} cle(s) par ligne.` : "Associer les actifs aux portefeuilles."}
+                detail={repartitions.length > 0 ? `${repartitions.length} cle(s) par ligne.` : "Associer les actifs aux portefeuilles."}
                 actionLabel="Repartir"
                 onAction={() => openSection("allocation")}
               />
@@ -414,9 +420,9 @@ export function StrategyPage() {
             </div>
           </Panel>
           <Panel title="Cles globales" subtitle="La cible des portefeuilles doit rester explicite.">
-            <div className="strategyWeightSummary">
+            <div className={isPortfolioWeightOverTarget ? "strategyWeightSummary warning" : "strategyWeightSummary"}>
               <strong>{formatPercent(totalPortfolioWeight)}</strong>
-              <span>{Math.abs(totalPortfolioWeight - 1) < 0.0001 ? "Repartition globale complete." : "La somme des cles globales differe de 100 %."}</span>
+              <span>{isPortfolioWeightOverTarget ? "La somme des cles globales depasse 100 %." : Math.abs(totalPortfolioWeight - 1) < 0.0001 ? "Repartition globale complete." : "La somme des cles globales differe de 100 %."}</span>
               <button className="ghostButton secondaryButton" onClick={() => openSection("portfolios")} type="button">Voir les portefeuilles</button>
             </div>
           </Panel>
@@ -439,10 +445,12 @@ export function StrategyPage() {
                 <label>Courtier<input value={portfolioForm.broker} onChange={(event) => setPortfolioForm({ ...portfolioForm, broker: event.target.value })} required /></label>
                 <label>Cle<DecimalInput min={0} max={1} step="0.01" value={portfolioForm.targetWeight} onChange={(value) => setPortfolioForm({ ...portfolioForm, targetWeight: value })} /></label>
                 <div className="formActions">
-                  <button type="submit">{editingPortfolioId ? "Mettre a jour" : "Ajouter le portefeuille"}</button>
+                  <button type="submit" disabled={isPortfolioTargetWeightInvalid || isProjectedPortfolioWeightInvalid}>{editingPortfolioId ? "Mettre a jour" : "Ajouter le portefeuille"}</button>
                   <button className="secondaryButton" type="button" onClick={() => activateEditor(null)}>Annuler</button>
                 </div>
               </form>
+              {isPortfolioTargetWeightInvalid ? <p className="stateError">Une cle globale ne peut pas depasser 100 %.</p> : null}
+              {!isPortfolioTargetWeightInvalid && isProjectedPortfolioWeightInvalid ? <p className="stateError">Cette cle ferait depasser 100 % pour les portefeuilles.</p> : null}
             </section>
           ) : null}
           {(savePortfolio.error || deletePortfolio.error) ? <p className="stateError">{errorText(savePortfolio.error ?? deletePortfolio.error)}</p> : null}
@@ -468,8 +476,7 @@ export function StrategyPage() {
         <Panel
           className="strategyPanel strategySectionPanel"
           title="Actifs"
-          subtitle="Titres utilisables dans les allocations et les regles."
-          action={<button className="ghostButton" onClick={createAsset} type="button">Ajouter</button>}
+          subtitle="Titres deja ajoutes depuis la page Actifs et utilisables dans les allocations."
         >
           {activeEditor === "asset" ? (
             <section className="strategyEditor">
@@ -477,8 +484,8 @@ export function StrategyPage() {
               <form className="form" onSubmit={(event) => { event.preventDefault(); saveAsset.mutate(); }}>
                 <label>Nom<input value={assetForm.name} onChange={(event) => setAssetForm({ ...assetForm, name: event.target.value })} required /></label>
                 <label>Symbole<input value={assetForm.symbol} onChange={(event) => setAssetForm({ ...assetForm, symbol: event.target.value })} required /></label>
-                <label>Type<select value={assetForm.type} onChange={(event) => setAssetForm({ ...assetForm, type: event.target.value as CreateAssetPayload["type"] })}>{assetTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
-                <label>Statut<select value={assetForm.strategicStatus} onChange={(event) => setAssetForm({ ...assetForm, strategicStatus: event.target.value as CreateAssetPayload["strategicStatus"] })}>{strategicStatuses.map((status) => <option key={status}>{status}</option>)}</select></label>
+                <label>Nature<select value={assetForm.type} onChange={(event) => setAssetForm({ ...assetForm, type: event.target.value as CreateAssetPayload["type"] })}>{assetTypeOptions.map((type) => <option value={type.value} key={type.value}>{type.label}</option>)}</select></label>
+                <label>Role strategique<select value={assetForm.strategicStatus} onChange={(event) => setAssetForm({ ...assetForm, strategicStatus: event.target.value as CreateAssetPayload["strategicStatus"] })}>{strategicStatusOptions.map((status) => <option value={status.value} key={status.value}>{status.label}</option>)}</select></label>
                 <div className="formActions">
                   <button type="submit">{editingAssetId ? "Mettre a jour" : "Ajouter l'actif"}</button>
                   <button className="secondaryButton" type="button" onClick={() => activateEditor(null)}>Annuler</button>
@@ -489,10 +496,10 @@ export function StrategyPage() {
           {(saveAsset.error || deleteAsset.error) ? <p className="stateError">{errorText(saveAsset.error ?? deleteAsset.error)}</p> : null}
           <QueryState isLoading={assetsQuery.isLoading} error={assetsQuery.error}>
             <div className="compactList">
-              {assets.length === 0 ? <p className="emptyState">Aucun actif configure.</p> : null}
+              {assets.length === 0 ? <p className="emptyState">Aucun actif configure. Utilisez la page Actifs pour rechercher et ajouter un titre.</p> : null}
               {assets.map((asset) => (
                 <div className={editingAssetId === asset.id ? "compactRow editingEntity" : "compactRow"} key={asset.id}>
-                  <div><strong>{asset.name}</strong><span>{asset.symbol} - {asset.strategicStatus}</span></div>
+                  <div><strong>{asset.name}</strong><span>{asset.symbol} - {formatStrategicStatus(asset.strategicStatus)}</span></div>
                   <div className="rowActions">
                     {editingAssetId === asset.id ? <span className="editingBadge">En edition</span> : null}
                     <ActionIconButton action="edit" isActive={editingAssetId === asset.id} label={`Modifier ${asset.name}`} onClick={() => editAsset(asset)} />
@@ -510,7 +517,7 @@ export function StrategyPage() {
           className="strategyPanel strategySectionPanel"
           title="Repartition"
           subtitle="Allocation des actifs dans chaque portefeuille."
-          action={<button className="ghostButton" disabled={!selectedAllocationPortfolioId || assets.length === 0} onClick={createAllocationRule} type="button">Ajouter</button>}
+          action={<button className="ghostButton" disabled={!selectedAllocationPortfolioId || assets.length === 0} onClick={createRepartition} type="button">Ajouter</button>}
         >
           <div className="allocationToolbar">
             <label>
@@ -520,42 +527,45 @@ export function StrategyPage() {
                 {portfolios.map((portfolio) => <option value={portfolio.id} key={portfolio.id}>{portfolio.name}</option>)}
               </select>
             </label>
-            <div className="allocationGauge">
+            <div className={isAllocationWeightOverTarget ? "allocationGauge warning" : "allocationGauge"}>
               <span>Somme des cles</span>
               <strong>{formatPercent(visibleAllocationWeight)}</strong>
               <small>{selectedAllocationPortfolio?.name ?? "Selectionner un portefeuille"}</small>
+              {isAllocationWeightOverTarget ? <small className="allocationWarning">La repartition depasse 100 %. Corrigez les cles de ce portefeuille.</small> : null}
             </div>
           </div>
           {activeEditor === "allocation" ? (
             <section className="strategyEditor">
-              <h3>{editingAllocationRuleId ? "Modifier la cle" : "Nouvelle cle"}</h3>
-              <form className="form" onSubmit={(event) => { event.preventDefault(); saveAllocationRule.mutate(); }}>
-                <label>Portefeuille<select value={allocationForm.portfolioId} onChange={(event) => setAllocationForm({ ...allocationForm, portfolioId: event.target.value })} required disabled={Boolean(editingAllocationRuleId)}><option value="">Selectionner</option>{portfolios.map((portfolio) => <option value={portfolio.id} key={portfolio.id}>{portfolio.name}</option>)}</select></label>
-                <label>Actif<select value={allocationForm.assetId} onChange={(event) => setAllocationForm({ ...allocationForm, assetId: event.target.value })} required disabled={Boolean(editingAllocationRuleId)}><option value="">Selectionner</option>{assets.map((asset) => <option value={asset.id} key={asset.id}>{asset.name} - {asset.symbol}</option>)}</select></label>
-                <label>Cle<DecimalInput min={0} max={1} step="0.01" value={allocationForm.targetWeight} onChange={(value) => setAllocationForm({ ...allocationForm, targetWeight: value })} /></label>
-                <label>Statut<select value={allocationForm.status} onChange={(event) => setAllocationForm({ ...allocationForm, status: event.target.value as CreateAllocationRulePayload["status"] })}>{allocationRuleStatuses.map((status) => <option key={status}>{status}</option>)}</select></label>
+              <h3>{editingRepartitionId ? "Modifier la cle" : "Nouvelle cle"}</h3>
+              <form className="form" onSubmit={(event) => { event.preventDefault(); saveRepartition.mutate(); }}>
+                <label>Portefeuille<select value={repartitionForm.portfolioId} onChange={(event) => setRepartitionForm({ ...repartitionForm, portfolioId: event.target.value })} required disabled={Boolean(editingRepartitionId)}><option value="">Selectionner</option>{portfolios.map((portfolio) => <option value={portfolio.id} key={portfolio.id}>{portfolio.name}</option>)}</select></label>
+                <label>Actif<select value={repartitionForm.assetId} onChange={(event) => setRepartitionForm({ ...repartitionForm, assetId: event.target.value })} required disabled={Boolean(editingRepartitionId)}><option value="">Selectionner</option>{assets.map((asset) => <option value={asset.id} key={asset.id}>{asset.name} - {asset.symbol}</option>)}</select></label>
+                <label>Cle<DecimalInput min={0} max={1} step="0.01" value={repartitionForm.targetWeight} onChange={(value) => setRepartitionForm({ ...repartitionForm, targetWeight: value })} /></label>
+                <label>Etat de repartition<select value={repartitionForm.status} onChange={(event) => setRepartitionForm({ ...repartitionForm, status: event.target.value as CreateRepartitionPayload["status"] })}>{repartitionStatusOptions.map((status) => <option value={status.value} key={status.value}>{status.label}</option>)}</select></label>
                 <div className="formActions">
-                  <button type="submit" disabled={!allocationForm.portfolioId || !allocationForm.assetId}>{editingAllocationRuleId ? "Mettre a jour" : "Ajouter la cle"}</button>
+                  <button type="submit" disabled={!repartitionForm.portfolioId || !repartitionForm.assetId || isAllocationTargetWeightInvalid || isProjectedAllocationWeightInvalid}>{editingRepartitionId ? "Mettre a jour" : "Ajouter la cle"}</button>
                   <button className="secondaryButton" type="button" onClick={() => activateEditor(null)}>Annuler</button>
                 </div>
               </form>
+              {isAllocationTargetWeightInvalid ? <p className="stateError">Une cle individuelle ne peut pas depasser 100 %.</p> : null}
+              {!isAllocationTargetWeightInvalid && isProjectedAllocationWeightInvalid ? <p className="stateError">Cette cle ferait depasser 100 % pour ce portefeuille.</p> : null}
             </section>
           ) : null}
-          {(saveAllocationRule.error || deleteAllocationRule.error) ? <p className="stateError">{errorText(saveAllocationRule.error ?? deleteAllocationRule.error)}</p> : null}
-          <QueryState isLoading={allocationRulesQuery.isLoading} error={allocationRulesQuery.error}>
+          {(saveRepartition.error || deleteRepartition.error) ? <p className="stateError">{errorText(saveRepartition.error ?? deleteRepartition.error)}</p> : null}
+          <QueryState isLoading={repartitionsQuery.isLoading} error={repartitionsQuery.error}>
             <div className="compactList">
               {!selectedAllocationPortfolioId ? <p className="emptyState">Creer un portefeuille avant de definir sa repartition.</p> : null}
-              {selectedAllocationPortfolioId && visibleAllocationRules.length === 0 ? <p className="emptyState">Aucune cle definie pour ce portefeuille.</p> : null}
-              {visibleAllocationRules.map((rule) => (
-                <div className={editingAllocationRuleId === rule.id ? "compactRow editingEntity" : "compactRow"} key={rule.id}>
+              {selectedAllocationPortfolioId && visibleRepartitions.length === 0 ? <p className="emptyState">Aucune cle definie pour ce portefeuille.</p> : null}
+              {visibleRepartitions.map((repartition) => (
+                <div className={editingRepartitionId === repartition.id ? "compactRow editingEntity" : "compactRow"} key={repartition.id}>
                   <div>
-                    <strong>{assetById.get(rule.assetId)?.name ?? "Actif"}</strong>
-                    <span>{assetById.get(rule.assetId)?.symbol ?? "Symbole"} - {formatPercent(rule.targetWeight)} - {rule.status}</span>
+                    <strong>{assetById.get(repartition.assetId)?.name ?? "Actif"}</strong>
+                    <span>{assetById.get(repartition.assetId)?.symbol ?? "Symbole"} - {formatPercent(repartition.targetWeight)} - {formatRepartitionStatus(repartition.status)}</span>
                   </div>
                   <div className="rowActions">
-                    {editingAllocationRuleId === rule.id ? <span className="editingBadge">En edition</span> : null}
-                    <ActionIconButton action="edit" isActive={editingAllocationRuleId === rule.id} label={`Modifier la cle de ${assetById.get(rule.assetId)?.name ?? "l'actif"}`} onClick={() => editAllocationRule(rule)} />
-                    <ActionIconButton action="delete" label={`Supprimer la cle de ${assetById.get(rule.assetId)?.name ?? "l'actif"}`} onClick={() => deleteAllocationRule.mutate(rule.id)} />
+                    {editingRepartitionId === repartition.id ? <span className="editingBadge">En edition</span> : null}
+                    <ActionIconButton action="edit" isActive={editingRepartitionId === repartition.id} label={`Modifier la cle de ${assetById.get(repartition.assetId)?.name ?? "l'actif"}`} onClick={() => editRepartition(repartition)} />
+                    <ActionIconButton action="delete" label={`Supprimer la cle de ${assetById.get(repartition.assetId)?.name ?? "l'actif"}`} onClick={() => deleteRepartition.mutate(repartition.id)} />
                   </div>
                 </div>
               ))}

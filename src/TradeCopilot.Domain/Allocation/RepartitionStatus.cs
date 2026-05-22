@@ -1,6 +1,6 @@
 namespace TradeCopilot.Domain;
 
-public enum AllocationRuleStatus
+public enum RepartitionStatus
 {
     Active,
     Frozen,

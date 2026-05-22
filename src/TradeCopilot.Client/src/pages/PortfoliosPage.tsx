@@ -30,6 +30,13 @@ export function PortfoliosPage() {
   const portfoliosQuery = useQuery({ queryKey: ["portfolios"], queryFn: tradeCopilotApi.getPortfolios });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<PortfolioForm>(emptyPortfolio);
+  const portfolios = portfoliosQuery.data ?? [];
+  const formTargetWeight = parseDecimalInput(form.targetWeight);
+  const isTargetWeightInvalid = formTargetWeight > 1;
+  const projectedTargetWeight = portfolios
+    .filter((portfolio) => portfolio.id !== editingId)
+    .reduce((total, portfolio) => total + portfolio.targetWeight, formTargetWeight);
+  const isProjectedTargetWeightInvalid = projectedTargetWeight > 1.000001;
 
   const toPayload = (): CreatePortfolioPayload => ({
     ...form,
@@ -50,6 +57,12 @@ export function PortfoliosPage() {
   });
 
   function edit(portfolio: Portfolio) {
+    if (editingId === portfolio.id) {
+      setEditingId(null);
+      setForm(emptyPortfolio);
+      return;
+    }
+
     setEditingId(portfolio.id);
     setForm({
       name: portfolio.name,
@@ -74,16 +87,19 @@ export function PortfoliosPage() {
             <label>Solde especes<DecimalInput step="0.01" value={form.cashBalance} onChange={(value) => setForm({ ...form, cashBalance: value })} /><small>Liquidites disponibles dans ce portefeuille, hors titres detenus.</small></label>
             <label>Cle globale<DecimalInput step="0.01" min={0} max={1} value={form.targetWeight} onChange={(value) => setForm({ ...form, targetWeight: value })} /></label>
             <div className="formActions">
-              <button type="submit">{editingId ? "Enregistrer" : "Creer"}</button>
+              <button type="submit" disabled={isTargetWeightInvalid || isProjectedTargetWeightInvalid}>{editingId ? "Enregistrer" : "Creer"}</button>
               {editingId ? <button className="secondaryButton" type="button" onClick={() => { setEditingId(null); setForm(emptyPortfolio); }}>Annuler</button> : null}
             </div>
           </form>
+          {isTargetWeightInvalid ? <p className="stateError">Une cle globale ne peut pas depasser 100 %.</p> : null}
+          {!isTargetWeightInvalid && isProjectedTargetWeightInvalid ? <p className="stateError">Cette cle ferait depasser 100 % pour les portefeuilles.</p> : null}
+          {savePortfolio.error ? <p className="stateError">{savePortfolio.error instanceof Error ? savePortfolio.error.message : "Operation impossible pour le moment."}</p> : null}
         </Panel>
 
         <Panel className="portfolioListPanel" title="Portefeuilles existants" subtitle="Selectionner une ligne pour la corriger.">
           <QueryState isLoading={portfoliosQuery.isLoading} error={portfoliosQuery.error}>
             <div className="compactList">
-              {(portfoliosQuery.data ?? []).map((portfolio) => (
+              {portfolios.map((portfolio) => (
                 <div className={editingId === portfolio.id ? "compactRow editingEntity" : "compactRow"} key={portfolio.id}>
                   <div>
                     <strong>{portfolio.name}</strong>

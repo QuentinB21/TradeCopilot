@@ -15,9 +15,9 @@ public sealed class DashboardQueryService(
         var assets = await repository.GetAssetsAsync(cancellationToken);
         var transactions = await repository.GetTransactionsAsync(cancellationToken);
         var prices = await repository.GetPricesAsync(cancellationToken);
-        var allocationRules = await repository.GetAllocationRulesAsync(cancellationToken);
+        var repartitions = await repository.GetAssetRepartitionsAsync(cancellationToken);
         var refreshedPrices = await marketPriceRefreshService.RefreshCurrentPricesAsync(assets, transactions, prices, cancellationToken);
 
-        return dashboardService.BuildDashboard(portfolios, assets, transactions, refreshedPrices, allocationRules);
+        return dashboardService.BuildDashboard(portfolios, assets, transactions, refreshedPrices, repartitions);
     }
 }

@@ -10,6 +10,7 @@ import { Panel } from "../components/Panel";
 import { QueryState } from "../components/QueryState";
 import { readDashboardRefreshInterval } from "../lib/appSettings";
 import { formatCurrencyCompact, formatPercent } from "../lib/format";
+import { formatStrategicStatus } from "../domain/options";
 import type { Dashboard, DashboardHistoryPoint, PortfolioSummary, Position } from "../domain/types";
 
 const chartColors = ["#0a0a0a", "#155eef", "#0b7a48", "#b86a00", "#c22a2a", "#525252", "#7c3aed", "#0f766e"];
@@ -413,7 +414,7 @@ export function PositionTable({ positions }: { positions: Position[] }) {
               </td>
               <td>{formatPercent(position.weight)}</td>
               <td>{position.targetWeight == null ? "-" : formatPercent(position.targetWeight)}</td>
-              <td><span className="status">{position.strategicStatus}</span></td>
+              <td><span className="status">{formatStrategicStatus(position.strategicStatus)}</span></td>
             </tr>
           ))}
         </tbody>

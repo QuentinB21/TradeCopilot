@@ -26,15 +26,29 @@ public sealed class PortfoliosController(IPortfolioService portfolioService) : C
     [HttpPost]
     public async Task<ActionResult<PortfolioDto>> CreatePortfolio(CreatePortfolioRequest request, CancellationToken cancellationToken)
     {
-        var portfolio = await portfolioService.CreatePortfolioAsync(request, cancellationToken);
-        return CreatedAtAction(nameof(GetPortfolio), new { id = portfolio.Id }, portfolio);
+        try
+        {
+            var portfolio = await portfolioService.CreatePortfolioAsync(request, cancellationToken);
+            return CreatedAtAction(nameof(GetPortfolio), new { id = portfolio.Id }, portfolio);
+        }
+        catch (ArgumentException exception)
+        {
+            return BadRequest(exception.Message);
+        }
     }
 
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<PortfolioDto>> UpdatePortfolio(Guid id, UpdatePortfolioRequest request, CancellationToken cancellationToken)
     {
-        var portfolio = await portfolioService.UpdatePortfolioAsync(id, request, cancellationToken);
-        return portfolio is null ? NotFound() : Ok(portfolio);
+        try
+        {
+            var portfolio = await portfolioService.UpdatePortfolioAsync(id, request, cancellationToken);
+            return portfolio is null ? NotFound() : Ok(portfolio);
+        }
+        catch (ArgumentException exception)
+        {
+            return BadRequest(exception.Message);
+        }
     }
 
     [HttpDelete("{id:guid}")]

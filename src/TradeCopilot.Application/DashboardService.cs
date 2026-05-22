@@ -10,14 +10,14 @@ public sealed class DashboardService(PositionCalculator positionCalculator)
         IReadOnlyList<Asset> assets,
         IReadOnlyList<Transaction> transactions,
         IReadOnlyList<AssetPrice> prices,
-        IReadOnlyList<AllocationRule> allocationRules)
+        IReadOnlyList<Repartition> repartitions)
     {
-        var positions = positionCalculator.Calculate(portfolios, assets, transactions, prices, allocationRules);
+        var positions = positionCalculator.Calculate(portfolios, assets, transactions, prices, repartitions);
         var totalMarketValue = positions.Sum(position => position.MarketValue);
         var totalInvested = positions.Sum(position => position.InvestedAmount);
         var totalGain = positions.Sum(position => position.UnrealizedGain);
         var portfolioSummaries = BuildPortfolioSummaries(portfolios, positions, totalMarketValue);
-        var history = BuildHistory(portfolios, assets, transactions, prices, allocationRules);
+        var history = BuildHistory(portfolios, assets, transactions, prices, repartitions);
 
         return new DashboardDto(
             totalMarketValue,
@@ -68,7 +68,7 @@ public sealed class DashboardService(PositionCalculator positionCalculator)
         IReadOnlyList<Asset> assets,
         IReadOnlyList<Transaction> transactions,
         IReadOnlyList<AssetPrice> prices,
-        IReadOnlyList<AllocationRule> allocationRules)
+        IReadOnlyList<Repartition> repartitions)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var dates = transactions
@@ -92,7 +92,7 @@ public sealed class DashboardService(PositionCalculator positionCalculator)
                     assets,
                     transactions.Where(transaction => transaction.Date <= date).ToList(),
                     prices.Where(price => price.Date <= date).ToList(),
-                    allocationRules);
+                    repartitions);
 
                 var positionsByPortfolio = positions
                     .GroupBy(position => position.PortfolioId)

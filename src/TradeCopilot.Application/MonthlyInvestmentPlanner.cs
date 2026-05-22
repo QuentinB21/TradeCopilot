@@ -11,7 +11,7 @@ public sealed class MonthlyInvestmentPlanner
         IReadOnlyList<Portfolio> portfolios,
         IReadOnlyList<Asset> assets,
         IReadOnlyList<PositionDto> positions,
-        IReadOnlyList<AllocationRule> allocationRules)
+        IReadOnlyList<Repartition> repartitions)
     {
         var notes = new List<string>
         {
@@ -34,7 +34,7 @@ public sealed class MonthlyInvestmentPlanner
                 amount * normalizedPortfolioWeight,
                 assets,
                 positions.Where(position => position.PortfolioId == portfolio.Id).ToList(),
-                allocationRules.Where(rule => rule.PortfolioId == portfolio.Id).ToList()));
+                repartitions.Where(repartition => repartition.PortfolioId == portfolio.Id).ToList()));
         }
 
         return new MonthlyInvestmentPlanDto(decimal.Round(amount, 2), envelopes, notes);
@@ -45,26 +45,26 @@ public sealed class MonthlyInvestmentPlanner
         decimal amount,
         IReadOnlyList<Asset> assets,
         IReadOnlyList<PositionDto> positions,
-        IReadOnlyList<AllocationRule> rules)
+        IReadOnlyList<Repartition> repartitions)
     {
         var assetById = assets.ToDictionary(asset => asset.Id);
         var positionByAssetId = positions.ToDictionary(position => position.AssetId);
-        var activeRules = rules
-            .Where(rule => rule.Status == AllocationRuleStatus.Active)
-            .Where(rule => assetById.TryGetValue(rule.AssetId, out var asset) &&
+        var activeRepartitions = repartitions
+            .Where(repartition => repartition.Status == RepartitionStatus.Active)
+            .Where(repartition => assetById.TryGetValue(repartition.AssetId!.Value, out var asset) &&
                            asset.StrategicStatus is StrategicStatus.Core or StrategicStatus.Conviction)
             .ToList();
 
-        var totalTarget = activeRules.Sum(rule => rule.TargetWeight);
-        var lines = activeRules.Select(rule =>
+        var totalTarget = activeRepartitions.Sum(repartition => repartition.TargetWeight);
+        var lines = activeRepartitions.Select(repartition =>
         {
-            var asset = assetById[rule.AssetId];
+            var asset = assetById[repartition.AssetId!.Value];
             positionByAssetId.TryGetValue(asset.Id, out var position);
-            var normalizedWeight = totalTarget > 0m ? rule.TargetWeight / totalTarget : 0m;
+            var normalizedWeight = totalTarget > 0m ? repartition.TargetWeight / totalTarget : 0m;
             var lineAmount = decimal.Round(amount * normalizedWeight, 2, MidpointRounding.AwayFromZero);
             var currentWeight = position?.Weight;
 
-            var rationale = currentWeight.HasValue && currentWeight.Value > rule.TargetWeight
+            var rationale = currentWeight.HasValue && currentWeight.Value > repartition.TargetWeight
                 ? "Sous-allocation du versement car la ligne est deja au-dessus de sa cible."
                 : "Renforcement conforme a la cible strategique.";
 
@@ -73,7 +73,7 @@ public sealed class MonthlyInvestmentPlanner
                 asset.Symbol,
                 asset.Name,
                 lineAmount,
-                rule.TargetWeight,
+                repartition.TargetWeight,
                 currentWeight,
                 rationale);
         }).ToList();

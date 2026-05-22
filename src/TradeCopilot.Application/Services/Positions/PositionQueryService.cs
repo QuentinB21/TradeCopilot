@@ -11,5 +11,5 @@ public sealed class PositionQueryService(IInvestmentRepository repository, Posit
             await repository.GetAssetsAsync(cancellationToken),
             await repository.GetTransactionsAsync(cancellationToken),
             await repository.GetPricesAsync(cancellationToken),
-            await repository.GetAllocationRulesAsync(cancellationToken));
+            await repository.GetAssetRepartitionsAsync(cancellationToken));
 }

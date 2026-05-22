@@ -10,7 +10,7 @@ public sealed class PositionCalculator
         IReadOnlyList<Asset> assets,
         IReadOnlyList<Transaction> transactions,
         IReadOnlyList<AssetPrice> prices,
-        IReadOnlyList<AllocationRule> allocationRules)
+        IReadOnlyList<Repartition> repartitions)
     {
         var assetsById = assets.ToDictionary(asset => asset.Id);
         var portfoliosById = portfolios.ToDictionary(portfolio => portfolio.Id);
@@ -92,9 +92,9 @@ public sealed class PositionCalculator
             .GroupBy(position => position.Portfolio.Id)
             .ToDictionary(group => group.Key, group => group.Sum(position => position.MarketValue));
 
-        var targetWeightByPortfolioAsset = allocationRules.ToDictionary(
-            rule => (rule.PortfolioId, rule.AssetId),
-            rule => rule.TargetWeight);
+        var targetWeightByPortfolioAsset = repartitions.ToDictionary(
+            repartition => (repartition.PortfolioId, repartition.AssetId!.Value),
+            repartition => repartition.TargetWeight);
 
         return rawPositions.Select(position =>
         {
