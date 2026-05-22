@@ -1,5 +1,5 @@
 export type PortfolioType = "Pea" | "SecuritiesAccount" | "Crypto" | "Other";
-export type AssetType = "Etf" | "Stock" | "Cash" | "Other";
+export type AssetType = "Etf" | "Stock" | "Cash" | "Other" | "Crypto";
 export type StrategicStatus = "Core" | "Conviction" | "Observation" | "Frozen" | "PlannedExit" | "Sold";
 export type TransactionType = "Deposit" | "Withdrawal" | "Buy" | "Sell" | "Dividend" | "Fee" | "Split" | "ManualAdjustment";
 
@@ -20,7 +20,6 @@ export type Asset = {
   isin: string | null;
   type: AssetType;
   currency: string;
-  sector: string | null;
   priceProvider: string | null;
   marketSymbol: string | null;
   strategicStatus: StrategicStatus;
@@ -64,7 +63,6 @@ export type InstrumentSearchResult = {
   exchangeDisplay: string | null;
   quoteType: string | null;
   currency: string | null;
-  sector: string | null;
   suggestedType: AssetType;
   provider: string;
 };

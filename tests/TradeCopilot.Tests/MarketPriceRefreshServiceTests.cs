@@ -45,6 +45,39 @@ public sealed class MarketPriceRefreshServiceTests
     }
 
     [Fact]
+    public async Task Refreshes_missing_price_for_crypto_asset()
+    {
+        var assetId = Guid.NewGuid();
+        var asset = new Asset
+        {
+            Id = assetId,
+            Name = "Bitcoin",
+            Symbol = "BTC-EUR",
+            Type = AssetType.Crypto,
+            Currency = "EUR",
+            StrategicStatus = StrategicStatus.Conviction
+        };
+        var repository = new FakeInvestmentRepository();
+        var provider = new FakeMarketDataProvider(new MarketQuoteDto(
+            "BTC-EUR",
+            new DateOnly(2026, 5, 21),
+            94000m,
+            95000m,
+            92000m,
+            94500m,
+            "EUR",
+            "test-provider",
+            DateTimeOffset.UtcNow));
+
+        var prices = await new MarketPriceRefreshService(repository, provider)
+            .RefreshCurrentPricesAsync([asset], [Buy(assetId)], []);
+
+        Assert.Equal(94500m, Assert.Single(prices).Close);
+        Assert.Equal(1, provider.Calls);
+        Assert.Single(repository.AddedPrices);
+    }
+
+    [Fact]
     public async Task Does_not_refresh_recent_price()
     {
         var assetId = Guid.NewGuid();
@@ -93,7 +126,7 @@ public sealed class MarketPriceRefreshServiceTests
             quote: null,
             searchResults:
             [
-                new InstrumentSearchResultDto("WPEA.PA", "iShares MSCI World Swap PEA", "PAR", "Paris", "ETF", "EUR", null, AssetType.Etf, "test-provider")
+                new InstrumentSearchResultDto("WPEA.PA", "iShares MSCI World Swap PEA", "PAR", "Paris", "ETF", "EUR", AssetType.Etf, "test-provider")
             ],
             quotesBySymbol: new Dictionary<string, MarketQuoteDto>(StringComparer.OrdinalIgnoreCase)
             {
@@ -109,12 +142,16 @@ public sealed class MarketPriceRefreshServiceTests
                     DateTimeOffset.UtcNow)
             });
 
-        var prices = await new MarketPriceRefreshService(new FakeInvestmentRepository(), provider)
+        var repository = new FakeInvestmentRepository();
+        var prices = await new MarketPriceRefreshService(repository, provider)
             .RefreshCurrentPricesAsync([asset], [Buy(assetId)], []);
 
         Assert.Equal(6.65m, Assert.Single(prices).Close);
         Assert.Equal(2, provider.Calls);
         Assert.Equal(1, provider.SearchCalls);
+        Assert.Equal("WPEA.PA", asset.MarketSymbol);
+        Assert.Equal("test-provider", asset.PriceProvider);
+        Assert.Same(asset, Assert.Single(repository.UpdatedAssets));
     }
 
     [Fact]
@@ -305,6 +342,7 @@ public sealed class MarketPriceRefreshServiceTests
     {
         public List<AssetPrice> AddedPrices { get; } = [];
         public List<AssetPrice> UpdatedPrices { get; } = [];
+        public List<Asset> UpdatedAssets { get; } = [];
 
         public Task AddPriceAsync(AssetPrice price, CancellationToken cancellationToken = default)
         {
@@ -337,7 +375,11 @@ public sealed class MarketPriceRefreshServiceTests
         public Task UpdatePortfolioAsync(Portfolio portfolio, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task DeletePortfolioAsync(Portfolio portfolio, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task AddAssetAsync(Asset asset, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task UpdateAssetAsync(Asset asset, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task UpdateAssetAsync(Asset asset, CancellationToken cancellationToken = default)
+        {
+            UpdatedAssets.Add(asset);
+            return Task.CompletedTask;
+        }
         public Task DeleteAssetAsync(Asset asset, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task AddTransactionAsync(Transaction transaction, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task AddTransactionsAsync(IReadOnlyCollection<Transaction> transactions, CancellationToken cancellationToken = default) => throw new NotSupportedException();

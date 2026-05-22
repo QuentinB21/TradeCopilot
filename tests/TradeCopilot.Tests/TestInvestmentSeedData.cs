@@ -28,16 +28,16 @@ public static class TestInvestmentSeedData
             Repartitions = [PortfolioRepartition(0.20m)]
         };
 
-        var wpea = Asset(Guid.Parse("20000000-0000-0000-0000-000000000001"), "iShares MSCI World Swap PEA", "WPEA", "IE0002XZSHO1", AssetType.Etf, "Global", StrategicStatus.Core);
-        var techEtf = Asset(Guid.Parse("20000000-0000-0000-0000-000000000002"), "ETF S&P 500 Information Technology", "SP500IT", null, AssetType.Etf, "Technology", StrategicStatus.Conviction);
-        var nvidia = Asset(Guid.Parse("20000000-0000-0000-0000-000000000003"), "NVIDIA", "NVDA", null, AssetType.Stock, "Technology", StrategicStatus.Conviction);
-        var microsoft = Asset(Guid.Parse("20000000-0000-0000-0000-000000000004"), "Microsoft", "MSFT", null, AssetType.Stock, "Technology", StrategicStatus.Conviction);
-        var amazon = Asset(Guid.Parse("20000000-0000-0000-0000-000000000005"), "Amazon", "AMZN", null, AssetType.Stock, "Consumer Discretionary", StrategicStatus.Conviction);
-        var apple = Asset(Guid.Parse("20000000-0000-0000-0000-000000000006"), "Apple", "AAPL", null, AssetType.Stock, "Technology", StrategicStatus.Conviction);
-        var palantir = Asset(Guid.Parse("20000000-0000-0000-0000-000000000007"), "Palantir", "PLTR", null, AssetType.Stock, "Technology", StrategicStatus.Observation);
-        var spotify = Asset(Guid.Parse("20000000-0000-0000-0000-000000000008"), "Spotify", "SPOT", null, AssetType.Stock, "Communication Services", StrategicStatus.PlannedExit);
-        var microStrategy = Asset(Guid.Parse("20000000-0000-0000-0000-000000000009"), "Strategy / MicroStrategy", "MSTR", null, AssetType.Stock, "Technology", StrategicStatus.PlannedExit);
-        var oracle = Asset(Guid.Parse("20000000-0000-0000-0000-000000000010"), "Oracle", "ORCL", null, AssetType.Stock, "Technology", StrategicStatus.Frozen);
+        var wpea = Asset(Guid.Parse("20000000-0000-0000-0000-000000000001"), "iShares MSCI World Swap PEA", "WPEA", "IE0002XZSHO1", AssetType.Etf, StrategicStatus.Core);
+        var techEtf = Asset(Guid.Parse("20000000-0000-0000-0000-000000000002"), "ETF S&P 500 Information Technology", "SP500IT", null, AssetType.Etf, StrategicStatus.Conviction);
+        var nvidia = Asset(Guid.Parse("20000000-0000-0000-0000-000000000003"), "NVIDIA", "NVDA", null, AssetType.Stock, StrategicStatus.Conviction);
+        var microsoft = Asset(Guid.Parse("20000000-0000-0000-0000-000000000004"), "Microsoft", "MSFT", null, AssetType.Stock, StrategicStatus.Conviction);
+        var amazon = Asset(Guid.Parse("20000000-0000-0000-0000-000000000005"), "Amazon", "AMZN", null, AssetType.Stock, StrategicStatus.Conviction);
+        var apple = Asset(Guid.Parse("20000000-0000-0000-0000-000000000006"), "Apple", "AAPL", null, AssetType.Stock, StrategicStatus.Conviction);
+        var palantir = Asset(Guid.Parse("20000000-0000-0000-0000-000000000007"), "Palantir", "PLTR", null, AssetType.Stock, StrategicStatus.Observation);
+        var spotify = Asset(Guid.Parse("20000000-0000-0000-0000-000000000008"), "Spotify", "SPOT", null, AssetType.Stock, StrategicStatus.PlannedExit);
+        var microStrategy = Asset(Guid.Parse("20000000-0000-0000-0000-000000000009"), "Strategy / MicroStrategy", "MSTR", null, AssetType.Stock, StrategicStatus.PlannedExit);
+        var oracle = Asset(Guid.Parse("20000000-0000-0000-0000-000000000010"), "Oracle", "ORCL", null, AssetType.Stock, StrategicStatus.Frozen);
 
         var assets = new[] { wpea, techEtf, nvidia, microsoft, amazon, apple, palantir, spotify, microStrategy, oracle };
 
@@ -93,7 +93,7 @@ public static class TestInvestmentSeedData
         return new TestInvestmentSeed([pea, tradeRepublic], assets, transactions, prices, repartitions, strategyRules);
     }
 
-    private static Asset Asset(Guid id, string name, string symbol, string? isin, AssetType type, string sector, StrategicStatus status) => new()
+    private static Asset Asset(Guid id, string name, string symbol, string? isin, AssetType type, StrategicStatus status) => new()
     {
         Id = id,
         Name = name,
@@ -101,7 +101,6 @@ public static class TestInvestmentSeedData
         Isin = isin,
         Type = type,
         Currency = "EUR",
-        Sector = sector,
         Country = "US",
         PriceProvider = "manual-seed",
         StrategicStatus = status

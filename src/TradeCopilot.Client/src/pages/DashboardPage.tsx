@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowDownRight, ArrowUpRight, CircleDollarSign, RefreshCw, Target } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, CircleDollarSign, RefreshCw, Target } from "lucide-react";
 import { type CSSProperties, useEffect, useMemo, useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { tradeCopilotApi } from "../api/tradeCopilotApi";
@@ -129,7 +129,6 @@ function DashboardContent({ dashboard }: { dashboard: Dashboard }) {
           icon={dashboard.totalUnrealizedGain >= 0 ? <ArrowUpRight size={20} /> : <ArrowDownRight size={20} />}
           tone={dashboard.totalUnrealizedGain >= 0 ? "positive" : "negative"}
         />
-        <Metric title="Cours manquants" value={String(missingPriceCount)} detail="valorisees au PRU" icon={<AlertTriangle size={20} />} tone="warning" />
       </section>
 
       <section className="dashboardFocusGrid">
@@ -366,14 +365,16 @@ function DashboardWatchlist({ positions, missingPriceCount }: { positions: Posit
 
   return (
     <div className="watchList">
-      <div className={missingPriceCount > 0 ? "watchItem watchItem-warning" : "watchItem watchItem-positive"}>
-        <strong>{missingPriceCount > 0 ? "Valorisation incomplete" : "Valorisation disponible"}</strong>
-        <span>{missingPriceCount > 0 ? `${missingPriceCount} ligne(s) utilisent encore le PRU.` : "Toutes les lignes suivies ont un cours exploitable."}</span>
-      </div>
+      {missingPriceCount > 0 ? (
+        <div className="watchItem watchItem-warning">
+          <strong>Cours manquants</strong>
+          <span>{missingPriceCount} ligne(s) utilisent encore le PRU.</span>
+        </div>
+      ) : null}
       {driftedPositions.map((position) => (
         <div className="watchItem" key={`${position.portfolioId}-${position.assetId}`}>
           <strong>{position.assetName}</strong>
-          <span>{position.symbol} - {position.portfolioName} - ecart {formatPercent(position.allocationDrift ?? 0)} vs cible.</span>
+          <span>{position.portfolioName} - ecart {formatPercent(position.allocationDrift ?? 0)} vs cible.</span>
         </div>
       ))}
       {driftedPositions.length === 0 ? <p className="emptyState">Les ecarts apparaitront apres configuration des cles par ligne.</p> : null}

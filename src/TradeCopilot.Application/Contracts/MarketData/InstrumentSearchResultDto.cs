@@ -9,6 +9,5 @@ public sealed record InstrumentSearchResultDto(
     string? ExchangeDisplay,
     string? QuoteType,
     string? Currency,
-    string? Sector,
     AssetType SuggestedType,
     string Provider);

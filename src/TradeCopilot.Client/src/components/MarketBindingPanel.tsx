@@ -68,7 +68,7 @@ export function MarketBindingPanel({ assets }: MarketBindingPanelProps) {
 
   return (
     <div className="marketBinding">
-      <div className="bindingAssetList" aria-label="Actifs sans cours lie">
+      <div className="bindingAssetList" aria-label="Actifs a lier a une cotation">
         {assets.map((asset) => (
           <button
             className={asset.assetId === selectedAsset.assetId ? "bindingAsset active" : "bindingAsset"}

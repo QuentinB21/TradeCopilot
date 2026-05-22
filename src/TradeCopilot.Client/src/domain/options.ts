@@ -6,6 +6,7 @@ export const transactionTypes: TransactionType[] = ["Deposit", "Withdrawal", "Bu
 export const assetTypeOptions: Array<{ label: string; value: AssetType }> = [
   { value: "Etf", label: "ETF" },
   { value: "Stock", label: "Action" },
+  { value: "Crypto", label: "Crypto" },
   { value: "Cash", label: "Liquidites" },
   { value: "Other", label: "Autre actif" }
 ];

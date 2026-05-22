@@ -9,7 +9,6 @@ public sealed record AssetDto(
     string? Isin,
     AssetType Type,
     string Currency,
-    string? Sector,
     string? PriceProvider,
     string? MarketSymbol,
     StrategicStatus StrategicStatus);

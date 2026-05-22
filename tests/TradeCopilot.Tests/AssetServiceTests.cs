@@ -23,7 +23,6 @@ public sealed class AssetServiceTests
                 null,
                 null,
                 null,
-                null,
                 StrategicStatus.Frozen)));
 
         Assert.Contains("role strategique", exception.Message, StringComparison.OrdinalIgnoreCase);

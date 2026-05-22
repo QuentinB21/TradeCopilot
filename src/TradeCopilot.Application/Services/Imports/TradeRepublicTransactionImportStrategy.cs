@@ -213,6 +213,7 @@ public sealed class TradeRepublicTransactionImportStrategy : ITransactionImportS
         {
             "FUND" => AssetType.Etf,
             "STOCK" => AssetType.Stock,
+            "CRYPTO" => AssetType.Crypto,
             _ => AssetType.Other
         };
 

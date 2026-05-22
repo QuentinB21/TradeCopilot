@@ -9,7 +9,9 @@ import { formatCurrency } from "../lib/format";
 import { parseDecimalInput, toNumberInput } from "../lib/numberInput";
 import { PageHeader } from "../components/PageHeader";
 import { Panel } from "../components/Panel";
+import { Pagination } from "../components/Pagination";
 import { QueryState } from "../components/QueryState";
+import { usePagination } from "../hooks/usePagination";
 
 type PortfolioForm = Omit<CreatePortfolioPayload, "cashBalance" | "targetWeight"> & {
   cashBalance: string;
@@ -31,6 +33,7 @@ export function PortfoliosPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<PortfolioForm>(emptyPortfolio);
   const portfolios = portfoliosQuery.data ?? [];
+  const portfolioPagination = usePagination(portfolios);
   const formTargetWeight = parseDecimalInput(form.targetWeight);
   const isTargetWeightInvalid = formTargetWeight > 1;
   const projectedTargetWeight = portfolios
@@ -99,7 +102,7 @@ export function PortfoliosPage() {
         <Panel className="portfolioListPanel" title="Portefeuilles existants" subtitle="Selectionner une ligne pour la corriger.">
           <QueryState isLoading={portfoliosQuery.isLoading} error={portfoliosQuery.error}>
             <div className="compactList">
-              {portfolios.map((portfolio) => (
+              {portfolioPagination.pageItems.map((portfolio) => (
                 <div className={editingId === portfolio.id ? "compactRow editingEntity" : "compactRow"} key={portfolio.id}>
                   <div>
                     <strong>{portfolio.name}</strong>
@@ -113,6 +116,7 @@ export function PortfoliosPage() {
                 </div>
               ))}
             </div>
+            <Pagination {...portfolioPagination} itemLabel="portefeuilles" onPageChange={portfolioPagination.setPage} />
           </QueryState>
         </Panel>
       </section>

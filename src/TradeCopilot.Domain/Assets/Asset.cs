@@ -8,7 +8,6 @@ public sealed class Asset
     public string? Isin { get; set; }
     public AssetType Type { get; set; }
     public required string Currency { get; set; }
-    public string? Sector { get; set; }
     public string? Country { get; set; }
     public string? PriceProvider { get; set; }
     public string? MarketSymbol { get; set; }

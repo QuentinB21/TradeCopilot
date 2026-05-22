@@ -9,7 +9,9 @@ import { formatPercent } from "../lib/format";
 import { parseDecimalInput, parseNullableDecimalInput, toNumberInput } from "../lib/numberInput";
 import { PageHeader } from "../components/PageHeader";
 import { Panel } from "../components/Panel";
+import { Pagination } from "../components/Pagination";
 import { QueryState } from "../components/QueryState";
+import { usePagination } from "../hooks/usePagination";
 
 type PortfolioForm = Omit<CreatePortfolioPayload, "cashBalance" | "targetWeight"> & {
   cashBalance: string;
@@ -52,7 +54,6 @@ const emptyAsset: CreateAssetPayload = {
   isin: null,
   type: "Stock",
   currency: "EUR",
-  sector: "",
   country: "",
   priceProvider: "manual",
   marketSymbol: null,
@@ -130,6 +131,10 @@ export function StrategyPage() {
   const isProjectedPortfolioWeightInvalid = projectedPortfolioWeight > 1.000001;
   const isPortfolioWeightOverTarget = totalPortfolioWeight > 1.000001;
   const activeRulesCount = strategyRules.filter((rule) => rule.isActive).length;
+  const portfolioPagination = usePagination(portfolios);
+  const assetPagination = usePagination(assets);
+  const allocationPagination = usePagination(visibleRepartitions);
+  const rulePagination = usePagination(strategyRules);
 
   const invalidateConfiguration = async () => {
     await Promise.all([
@@ -186,7 +191,6 @@ export function StrategyPage() {
       isin: asset.isin,
       type: asset.type,
       currency: asset.currency,
-      sector: asset.sector,
       country: null,
       priceProvider: asset.priceProvider,
       marketSymbol: asset.marketSymbol,
@@ -457,7 +461,7 @@ export function StrategyPage() {
           <QueryState isLoading={portfoliosQuery.isLoading} error={portfoliosQuery.error}>
             <div className="compactList">
               {portfolios.length === 0 ? <p className="emptyState">Aucun portefeuille configure.</p> : null}
-              {portfolios.map((portfolio) => (
+              {portfolioPagination.pageItems.map((portfolio) => (
                 <div className={editingPortfolioId === portfolio.id ? "compactRow editingEntity" : "compactRow"} key={portfolio.id}>
                   <div><strong>{portfolio.name}</strong><span>{portfolio.broker} - {formatPercent(portfolio.targetWeight)}</span></div>
                   <div className="rowActions">
@@ -468,6 +472,7 @@ export function StrategyPage() {
                 </div>
               ))}
             </div>
+            <Pagination {...portfolioPagination} itemLabel="portefeuilles" onPageChange={portfolioPagination.setPage} />
           </QueryState>
         </Panel>
       ) : null}
@@ -497,7 +502,7 @@ export function StrategyPage() {
           <QueryState isLoading={assetsQuery.isLoading} error={assetsQuery.error}>
             <div className="compactList">
               {assets.length === 0 ? <p className="emptyState">Aucun actif configure. Utilisez la page Actifs pour rechercher et ajouter un titre.</p> : null}
-              {assets.map((asset) => (
+              {assetPagination.pageItems.map((asset) => (
                 <div className={editingAssetId === asset.id ? "compactRow editingEntity" : "compactRow"} key={asset.id}>
                   <div><strong>{asset.name}</strong><span>{asset.symbol} - {formatStrategicStatus(asset.strategicStatus)}</span></div>
                   <div className="rowActions">
@@ -508,6 +513,7 @@ export function StrategyPage() {
                 </div>
               ))}
             </div>
+            <Pagination {...assetPagination} itemLabel="actifs" onPageChange={assetPagination.setPage} />
           </QueryState>
         </Panel>
       ) : null}
@@ -556,7 +562,7 @@ export function StrategyPage() {
             <div className="compactList">
               {!selectedAllocationPortfolioId ? <p className="emptyState">Creer un portefeuille avant de definir sa repartition.</p> : null}
               {selectedAllocationPortfolioId && visibleRepartitions.length === 0 ? <p className="emptyState">Aucune cle definie pour ce portefeuille.</p> : null}
-              {visibleRepartitions.map((repartition) => (
+              {allocationPagination.pageItems.map((repartition) => (
                 <div className={editingRepartitionId === repartition.id ? "compactRow editingEntity" : "compactRow"} key={repartition.id}>
                   <div>
                     <strong>{assetById.get(repartition.assetId)?.name ?? "Actif"}</strong>
@@ -570,6 +576,7 @@ export function StrategyPage() {
                 </div>
               ))}
             </div>
+            <Pagination {...allocationPagination} itemLabel="cles" onPageChange={allocationPagination.setPage} />
           </QueryState>
         </Panel>
       ) : null}
@@ -603,7 +610,7 @@ export function StrategyPage() {
           <QueryState isLoading={strategyRulesQuery.isLoading} error={strategyRulesQuery.error}>
             <div className="compactList">
               {strategyRules.length === 0 ? <p className="emptyState">Aucune regle de decision configuree.</p> : null}
-              {strategyRules.map((rule) => (
+              {rulePagination.pageItems.map((rule) => (
                 <div className={editingStrategyRuleId === rule.id ? "compactRow editingEntity" : "compactRow"} key={rule.id}>
                   <div>
                     <strong>{rule.name}</strong>
@@ -618,6 +625,7 @@ export function StrategyPage() {
                 </div>
               ))}
             </div>
+            <Pagination {...rulePagination} itemLabel="regles" onPageChange={rulePagination.setPage} />
           </QueryState>
         </Panel>
       ) : null}

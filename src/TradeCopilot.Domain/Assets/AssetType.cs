@@ -5,5 +5,6 @@ public enum AssetType
     Etf,
     Stock,
     Cash,
-    Other
+    Other,
+    Crypto
 }

@@ -8,7 +8,6 @@ public sealed record CreateAssetRequest(
     string? Isin,
     AssetType Type,
     string Currency,
-    string? Sector,
     string? Country,
     string? PriceProvider,
     string? MarketSymbol,

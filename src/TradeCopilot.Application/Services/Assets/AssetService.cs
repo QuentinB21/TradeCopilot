@@ -37,7 +37,6 @@ public sealed class AssetService(IInvestmentRepository repository) : IAssetServi
             Isin = string.IsNullOrWhiteSpace(request.Isin) ? null : request.Isin.Trim().ToUpperInvariant(),
             Type = request.Type,
             Currency = request.Currency.Trim().ToUpperInvariant(),
-            Sector = request.Sector?.Trim(),
             Country = request.Country?.Trim(),
             PriceProvider = request.PriceProvider?.Trim(),
             MarketSymbol = NormalizeMarketSymbol(request.MarketSymbol),
@@ -66,7 +65,6 @@ public sealed class AssetService(IInvestmentRepository repository) : IAssetServi
         asset.Isin = string.IsNullOrWhiteSpace(request.Isin) ? null : request.Isin.Trim().ToUpperInvariant();
         asset.Type = request.Type;
         asset.Currency = request.Currency.Trim().ToUpperInvariant();
-        asset.Sector = request.Sector?.Trim();
         asset.Country = request.Country?.Trim();
         asset.PriceProvider = request.PriceProvider?.Trim();
         asset.MarketSymbol = NormalizeMarketSymbol(request.MarketSymbol);
@@ -117,7 +115,6 @@ public sealed class AssetService(IInvestmentRepository repository) : IAssetServi
         asset.Isin,
         asset.Type,
         asset.Currency,
-        asset.Sector,
         asset.PriceProvider,
         asset.MarketSymbol,
         asset.StrategicStatus);

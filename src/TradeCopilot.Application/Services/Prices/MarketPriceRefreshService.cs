@@ -163,6 +163,7 @@ public sealed class MarketPriceRefreshService(
             var normalizedQuote = await NormalizeQuoteAsync(asset, quote, targetCurrency, cancellationToken);
             if (normalizedQuote is not null)
             {
+                await SaveResolvedMarketBindingAsync(asset, candidate.Symbol, candidate.Provider, cancellationToken);
                 return normalizedQuote;
             }
         }
@@ -193,6 +194,7 @@ public sealed class MarketPriceRefreshService(
             var quotes = await marketDataProvider.GetDailyQuotesAsync(candidate.Symbol, from, to, cancellationToken);
             if (quotes.Count > 0)
             {
+                await SaveResolvedMarketBindingAsync(asset, candidate.Symbol, candidate.Provider, cancellationToken);
                 return quotes;
             }
         }
@@ -427,8 +429,25 @@ public sealed class MarketPriceRefreshService(
             .FirstOrDefault();
 
     private static bool IsRefreshable(Asset asset) =>
-        asset.Type is AssetType.Stock or AssetType.Etf
+        asset.Type is AssetType.Stock or AssetType.Etf or AssetType.Crypto
         || asset.Type is not AssetType.Cash && !string.IsNullOrWhiteSpace(asset.MarketSymbol);
+
+    private async Task SaveResolvedMarketBindingAsync(
+        Asset asset,
+        string marketSymbol,
+        string provider,
+        CancellationToken cancellationToken)
+    {
+        if (asset.MarketSymbol?.Equals(marketSymbol, StringComparison.OrdinalIgnoreCase) == true
+            && asset.PriceProvider?.Equals(provider, StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return;
+        }
+
+        asset.MarketSymbol = marketSymbol.Trim().ToUpperInvariant();
+        asset.PriceProvider = provider.Trim();
+        await repository.UpdateAssetAsync(asset, cancellationToken);
+    }
 
     private static decimal? Round(decimal? value) =>
         value.HasValue ? decimal.Round(value.Value, 6, MidpointRounding.AwayFromZero) : null;

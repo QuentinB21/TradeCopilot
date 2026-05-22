@@ -45,7 +45,6 @@ public sealed class YahooFinanceMarketDataProvider(HttpClient httpClient) : IMar
                 GetString(quote, "exchDisp"),
                 quoteType,
                 null,
-                GetString(quote, "sector"),
                 ToAssetType(quoteType),
                 ProviderName));
         }
@@ -242,7 +241,7 @@ public sealed class YahooFinanceMarketDataProvider(HttpClient httpClient) : IMar
             "ETF" => AssetType.Etf,
             "MUTUALFUND" => AssetType.Etf,
             "EQUITY" => AssetType.Stock,
-            "CRYPTOCURRENCY" => AssetType.Other,
+            "CRYPTOCURRENCY" => AssetType.Crypto,
             _ => AssetType.Stock
         };
 }

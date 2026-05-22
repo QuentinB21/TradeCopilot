@@ -10,7 +10,9 @@ import { formatCurrency } from "../lib/format";
 import { parseDecimalInput, toNumberInput } from "../lib/numberInput";
 import { PageHeader } from "../components/PageHeader";
 import { Panel } from "../components/Panel";
+import { Pagination } from "../components/Pagination";
 import { QueryState } from "../components/QueryState";
+import { usePagination } from "../hooks/usePagination";
 
 type TransactionForm = Omit<CreateTransactionPayload, "quantity" | "unitPrice" | "fees"> & {
   quantity: string;
@@ -179,6 +181,7 @@ export function TransactionsPage() {
   });
 
   const transactions = transactionsQuery.data ?? [];
+  const transactionPagination = usePagination(transactions, 10);
   const importWarningGroups = groupWarnings(importTransactions.data?.warnings ?? []);
 
   function useDroppedFile(event: DragEvent<HTMLLabelElement>) {
@@ -269,7 +272,7 @@ export function TransactionsPage() {
                 <table>
                   <thead><tr><th>Date</th><th>Type</th><th>Portefeuille</th><th>Actif</th><th>Quantite</th><th>Montant</th><th></th></tr></thead>
                   <tbody>
-                    {transactions.map((transaction) => (
+                    {transactionPagination.pageItems.map((transaction) => (
                       <tr className={editingId === transaction.id ? "editingRow" : undefined} key={transaction.id}>
                         <td>{transaction.date}</td>
                         <td>{transaction.type}</td>
@@ -295,6 +298,7 @@ export function TransactionsPage() {
                     ))}
                   </tbody>
                 </table>
+                <Pagination {...transactionPagination} itemLabel="transactions" onPageChange={transactionPagination.setPage} />
               </div>
             )}
           </QueryState>
