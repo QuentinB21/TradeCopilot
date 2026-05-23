@@ -696,6 +696,230 @@ th,
   grid-template-columns: minmax(360px, 0.75fr) minmax(0, 1.25fr);
 }
 
+.dashboardChartActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.segmentedControl {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 3px;
+}
+
+.segmentedControl button {
+  min-height: 30px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  padding: 0 9px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.segmentedControl button:hover,
+.segmentedControl button:focus-visible {
+  color: var(--ink);
+  outline: none;
+}
+
+.segmentedControl button.active {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.attentionSummary,
+.allocationSummary {
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.attentionHero,
+.allocationSummaryHero {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 14px;
+}
+
+.attentionHero strong,
+.allocationSummaryHero strong {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.attentionHero span,
+.allocationSummaryHero span,
+.allocationSummaryHero small,
+.allocationQuickList span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.attentionBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.attentionBadge {
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0 9px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.attentionBadge.warning {
+  border-color: #f2d093;
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.attentionBadge.critical {
+  border-color: #f2b8b5;
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.attentionPreview,
+.allocationQuickList,
+.drawerList {
+  display: grid;
+  gap: 8px;
+}
+
+.attentionLine,
+.allocationQuickList article {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  border-left: 3px solid var(--line);
+  background: var(--surface);
+  padding: 9px 10px;
+}
+
+.attentionLine strong,
+.attentionLine span,
+.allocationQuickList strong,
+.allocationQuickList span {
+  display: block;
+}
+
+.attentionLine strong,
+.allocationQuickList strong {
+  font-size: 13px;
+}
+
+.attentionLine span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.attentionLine-warning {
+  border-left-color: var(--warning);
+}
+
+.attentionLine-critical {
+  border-left-color: var(--danger);
+}
+
+.attentionLine-info {
+  border-left-color: var(--focus);
+}
+
+.dashboardDrawerLayer {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  display: grid;
+  justify-items: end;
+}
+
+.dashboardDrawerBackdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(10, 10, 10, 0.28);
+  backdrop-filter: blur(2px);
+}
+
+.dashboardDrawer {
+  position: relative;
+  width: min(620px, calc(100vw - 24px));
+  height: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  border-left: 1px solid var(--line);
+  background: var(--paper);
+  box-shadow: -18px 0 44px rgba(10, 10, 10, 0.16);
+}
+
+.dashboardDrawer header {
+  min-width: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  border-bottom: 1px solid var(--line);
+  padding: 22px;
+}
+
+.dashboardDrawer header > div {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.dashboardDrawer header strong {
+  font-size: 18px;
+}
+
+.dashboardDrawer header span {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.dashboardDrawerContent {
+  min-width: 0;
+  overflow-y: auto;
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  padding: 22px;
+}
+
+.drawerSection {
+  display: grid;
+  gap: 12px;
+}
+
+.drawerSection h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
 .portfolioWorkspace {
   grid-template-columns: minmax(320px, 0.74fr) minmax(360px, 1fr);
 }
@@ -1296,13 +1520,101 @@ th,
   gap: 12px;
 }
 
+.chartValueHeader {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-left: 88px;
+}
+
+.chartLiveValue {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.chartLiveValue strong {
+  font-size: clamp(24px, 2.6vw, 30px);
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.chartGainToggle {
+  min-height: 30px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  padding: 0 2px;
+  color: var(--ink);
+  font-size: clamp(15px, 1.7vw, 18px);
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.chartGainToggle:hover,
+.chartGainToggle:focus-visible {
+  color: var(--focus);
+  outline: none;
+}
+
+.chartGainToggle.positive {
+  color: var(--positive);
+}
+
+.chartGainToggle.negative {
+  color: var(--danger);
+}
+
+.chartValueHeader .segmentedControl {
+  border: 0;
+  background: transparent;
+  gap: clamp(9px, 1.7vw, 18px);
+  padding: 0;
+}
+
+.chartValueHeader .segmentedControl button {
+  min-height: 30px;
+  border-radius: 0;
+  color: #b8b8b0;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.chartValueHeader .segmentedControl button.active {
+  background: transparent;
+  color: var(--ink);
+}
+
 .chartCanvas {
+  position: relative;
   min-height: 300px;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: linear-gradient(180deg, var(--paper), var(--surface));
   padding: 8px 2px 0;
+}
+
+.chartCursorLabel {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  transform: translateX(-50%);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 8px 22px rgba(10, 10, 10, 0.08);
+  color: var(--ink);
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 750;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .chartCanvas .recharts-default-legend {
@@ -1347,7 +1659,7 @@ th,
 
 .chartRange {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: 1fr 1fr;
   align-items: center;
   gap: 10px;
 }
@@ -2102,8 +2414,18 @@ tbody tr:last-child td {
     min-height: 286px;
   }
 
+  .chartValueHeader {
+    align-items: flex-start;
+    flex-direction: column;
+    padding-left: 0;
+  }
+
+  .chartLiveValue {
+    gap: 8px;
+  }
+
   .chartRange {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
     text-align: left;
   }
 

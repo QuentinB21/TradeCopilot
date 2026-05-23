@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDownRight, ArrowUpRight, CircleDollarSign, RefreshCw, Target } from "lucide-react";
-import { type CSSProperties, useEffect, useMemo, useState } from "react";
-import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { ArrowDownRight, ArrowUpRight, CircleDollarSign, RefreshCw, Target, X } from "lucide-react";
+import { type CSSProperties, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { CartesianGrid, Legend, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { tradeCopilotApi } from "../api/tradeCopilotApi";
 import { Metric } from "../components/Metric";
 import { MarketBindingPanel } from "../components/MarketBindingPanel";
@@ -14,6 +14,21 @@ import { formatStrategicStatus } from "../domain/options";
 import type { Dashboard, DashboardHistoryPoint, PortfolioSummary, Position, RuleAlert } from "../domain/types";
 
 const chartColors = ["#0a0a0a", "#155eef", "#0b7a48", "#b86a00", "#c22a2a", "#525252", "#7c3aed", "#0f766e"];
+type DashboardPeriod = "1W" | "1M" | "1Y" | "MAX";
+type DashboardAlertItem = {
+  id: string;
+  title: string;
+  message: string;
+  severity: "Info" | "Warning" | "Critical";
+  kind: "rule" | "price" | "allocation";
+};
+
+const dashboardPeriodOptions: Array<{ value: DashboardPeriod; label: string }> = [
+  { value: "1W", label: "1S" },
+  { value: "1M", label: "1M" },
+  { value: "1Y", label: "1A" },
+  { value: "MAX", label: "MAX" }
+];
 
 export function DashboardPage() {
   const [refreshIntervalMs] = useState(readDashboardRefreshInterval);
@@ -83,7 +98,7 @@ function DashboardRefreshControl({
         <RefreshCw size={14} />
       </div>
       <div className="refreshTimerText">
-        <span>{isRefreshing ? "Mise a jour" : "Actualisation dans"}</span>
+        <span>{isRefreshing ? "Mise a jour" : "Actualisation"}</span>
         <strong>{isRefreshing ? "..." : formatCountdown(remainingMs)}</strong>
       </div>
     </div>
@@ -98,12 +113,23 @@ function formatCountdown(milliseconds: number) {
 }
 
 function DashboardContent({ dashboard }: { dashboard: Dashboard }) {
+  const [period, setPeriod] = useState<DashboardPeriod>("1M");
+  const [isAlertsDrawerOpen, setAlertsDrawerOpen] = useState(false);
+  const [isAllocationDrawerOpen, setAllocationDrawerOpen] = useState(false);
   const topPositions = useMemo(
     () => [...dashboard.positions].sort((a, b) => b.marketValue - a.marketValue).slice(0, 8),
     [dashboard.positions]
   );
   const missingPricePositions = dashboard.positions.filter((position) => !position.hasMarketPrice);
-  const missingPriceCount = missingPricePositions.length;
+  const alertItems = useMemo(() => buildDashboardAlerts(dashboard.positions, dashboard.ruleAlerts), [dashboard.positions, dashboard.ruleAlerts]);
+  const portfolioDrifts = useMemo(
+    () => [...dashboard.portfolios].filter((portfolio) => portfolio.targetWeight > 0).sort((a, b) => Math.abs(b.allocationDrift) - Math.abs(a.allocationDrift)),
+    [dashboard.portfolios]
+  );
+  const lineDrifts = useMemo(
+    () => [...dashboard.positions].filter((position) => position.targetWeight !== null).sort((a, b) => Math.abs(b.allocationDrift ?? 0) - Math.abs(a.allocationDrift ?? 0)),
+    [dashboard.positions]
+  );
 
   if (dashboard.portfolios.length === 0) {
     return (
@@ -132,11 +158,15 @@ function DashboardContent({ dashboard }: { dashboard: Dashboard }) {
       </section>
 
       <section className="dashboardFocusGrid">
-        <Panel title="Evolution globale" subtitle="Valeur de marche et capital investi" className="chartPanel">
-          <TotalValueChart history={dashboard.history} />
+        <Panel
+          title="Evolution globale"
+          subtitle="Historique journalier, sans granularite intraday pour cette version."
+          className="chartPanel"
+        >
+          <TotalValueChart history={dashboard.history} period={period} onPeriodChange={setPeriod} />
         </Panel>
-        <Panel title="A surveiller" subtitle="Ecarts qui meritent une action" className="watchPanel">
-          <DashboardWatchlist positions={dashboard.positions} missingPriceCount={missingPriceCount} ruleAlerts={dashboard.ruleAlerts} />
+        <Panel title="A traiter" subtitle="Signaux prioritaires" className="watchPanel">
+          <DashboardAttentionSummary alerts={alertItems} onOpenDetails={() => setAlertsDrawerOpen(true)} />
         </Panel>
       </section>
 
@@ -147,35 +177,156 @@ function DashboardContent({ dashboard }: { dashboard: Dashboard }) {
       ) : null}
 
       <section className="grid dashboardGrid">
-        <Panel title="Objectifs par portefeuille" subtitle="Poids reel vs cle cible">
-          <PortfolioObjectiveProgress portfolios={dashboard.portfolios} />
+        <Panel title="Allocation" subtitle="Ecart reel vs cible">
+          <AllocationSummary portfolios={portfolioDrifts} positions={lineDrifts} onOpenDetails={() => setAllocationDrawerOpen(true)} />
         </Panel>
-        <Panel title="Evolution par portefeuille" subtitle={`${dashboard.portfolios.length} enveloppes suivies`}>
-          <PortfolioHistoryChart dashboard={dashboard} />
-        </Panel>
-        <Panel title="Objectifs par ligne" subtitle="Ecarts les plus importants">
-          <LineObjectiveProgress positions={dashboard.positions} />
+        <Panel title="Evolution par portefeuille" subtitle={`${dashboard.portfolios.length} enveloppe(s) suivie(s)`}>
+          <PortfolioHistoryChart dashboard={dashboard} period={period} />
         </Panel>
       </section>
 
       <Panel title="Positions principales" subtitle="Classees par valeur de marche">
         <PositionTable positions={topPositions} />
       </Panel>
+
+      {isAlertsDrawerOpen ? (
+        <DashboardDrawer title="Alertes et signaux" subtitle={`${alertItems.length} element(s) a examiner`} onClose={() => setAlertsDrawerOpen(false)}>
+          <DashboardAlertList alerts={alertItems} />
+        </DashboardDrawer>
+      ) : null}
+
+      {isAllocationDrawerOpen ? (
+        <DashboardDrawer title="Details d'allocation" subtitle="Portefeuilles et lignes les plus eloignes des objectifs." onClose={() => setAllocationDrawerOpen(false)}>
+          <section className="drawerSection">
+            <h3>Portefeuilles</h3>
+            <PortfolioObjectiveProgress portfolios={dashboard.portfolios} />
+          </section>
+          <section className="drawerSection">
+            <h3>Lignes</h3>
+            <LineObjectiveProgress positions={dashboard.positions} />
+          </section>
+        </DashboardDrawer>
+      ) : null}
     </>
   );
 }
 
-function TotalValueChart({ history }: { history: DashboardHistoryPoint[] }) {
-  const points = normalizeHistory(history);
+function SegmentedControl<T extends string>({
+  ariaLabel,
+  onChange,
+  options,
+  value
+}: {
+  ariaLabel: string;
+  onChange: (value: T) => void;
+  options: Array<{ value: T; label: string }>;
+  value: T;
+}) {
+  return (
+    <div className="segmentedControl" aria-label={ariaLabel}>
+      {options.map((option) => (
+        <button
+          className={option.value === value ? "active" : ""}
+          key={option.value}
+          onClick={() => onChange(option.value)}
+          type="button"
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function TotalValueChart({
+  history,
+  onPeriodChange,
+  period
+}: {
+  history: DashboardHistoryPoint[];
+  onPeriodChange: (period: DashboardPeriod) => void;
+  period: DashboardPeriod;
+}) {
+  const [activePoint, setActivePoint] = useState<DashboardHistoryPoint | null>(null);
+  const [cursorRatio, setCursorRatio] = useState(1);
+  const [gainDisplay, setGainDisplay] = useState<"percent" | "amount">("percent");
+  const chartRef = useRef<HTMLDivElement | null>(null);
+  const points = filterHistoryByPeriod(normalizeHistory(history), period);
+  useEffect(() => {
+    const handleDocumentMouseMove = (event: MouseEvent) => {
+      const chart = chartRef.current;
+      if (!chart) {
+        return;
+      }
+
+      const bounds = chart.getBoundingClientRect();
+      const isInsideChart =
+        event.clientX >= bounds.left &&
+        event.clientX <= bounds.right &&
+        event.clientY >= bounds.top &&
+        event.clientY <= bounds.bottom;
+
+      if (!isInsideChart) {
+        setActivePoint(null);
+      }
+    };
+
+    document.addEventListener("mousemove", handleDocumentMouseMove);
+    return () => document.removeEventListener("mousemove", handleDocumentMouseMove);
+  }, []);
+
   if (points.length < 2) {
     return <p className="emptyState">Ajoutez plusieurs operations ou cours dates pour afficher une evolution.</p>;
   }
 
+  const latestPoint = points.at(-1) ?? points[0];
+  const displayedPoint = activePoint && points.some((point) => point.date === activePoint.date) ? activePoint : latestPoint;
+  const gainPercent = displayedPoint.totalInvested > 0 ? displayedPoint.totalUnrealizedGain / displayedPoint.totalInvested : 0;
+  const gainValue = gainDisplay === "percent"
+    ? formatPercent(gainPercent)
+    : formatCurrencyCompact(displayedPoint.totalUnrealizedGain);
+  const gainTone = displayedPoint.totalUnrealizedGain >= 0 ? "positive" : "negative";
   const maxValue = Math.max(...points.flatMap((point) => [point.totalMarketValue, point.totalInvested]), 1);
+  const updateActivePointFromMouse = (clientX: number, bounds: DOMRect) => {
+    const plotLeft = 92;
+    const plotRight = 18;
+    const plotWidth = Math.max(bounds.width - plotLeft - plotRight, 1);
+    const ratio = Math.min(Math.max((clientX - bounds.left - plotLeft) / plotWidth, 0), 1);
+    const index = Math.min(Math.max(Math.round(ratio * (points.length - 1)), 0), points.length - 1);
+    setCursorRatio(ratio);
+    setActivePoint(points[index]);
+  };
 
   return (
     <div className="chartBlock">
-      <div className="chartCanvas" role="img" aria-label="Evolution globale du patrimoine">
+      <div className="chartValueHeader">
+        <div className="chartLiveValue">
+          <strong>{formatCurrencyCompact(displayedPoint.totalMarketValue)}</strong>
+          <button
+            className={`chartGainToggle ${gainTone}`}
+            onClick={() => setGainDisplay(gainDisplay === "percent" ? "amount" : "percent")}
+            title="Basculer le gain latent entre pourcentage et euros"
+            type="button"
+          >
+            {displayedPoint.totalUnrealizedGain >= 0 ? "+" : ""}
+            {gainValue}
+          </button>
+        </div>
+        <SegmentedControl options={dashboardPeriodOptions} value={period} onChange={onPeriodChange} ariaLabel="Periode du graphique" />
+      </div>
+      <div
+        className="chartCanvas"
+        ref={chartRef}
+        role="img"
+        aria-label="Evolution globale du patrimoine"
+        onMouseLeave={() => setActivePoint(null)}
+        onMouseMove={(event) => updateActivePointFromMouse(event.clientX, event.currentTarget.getBoundingClientRect())}
+      >
+        {activePoint ? (
+          <div className="chartCursorLabel" style={{ left: `${8 + cursorRatio * 88}%` }}>
+            {formatDate(activePoint.date)}
+          </div>
+        ) : null}
         <ResponsiveContainer width="100%" height={280}>
           <LineChart data={points} margin={{ top: 18, right: 18, bottom: 8, left: 4 }}>
             <CartesianGrid stroke="#deded8" strokeDasharray="4 8" vertical={false} />
@@ -187,24 +338,23 @@ function TotalValueChart({ history }: { history: DashboardHistoryPoint[] }) {
               tickLine={false}
               width={88}
             />
-            <Tooltip content={<PortfolioTooltip />} />
             <Legend />
-            <Line dataKey="totalInvested" dot={false} name="Investi" stroke="#b86a00" strokeWidth={2.5} type="monotone" />
-            <Line dataKey="totalMarketValue" dot={false} name="Valeur" stroke="#0a0a0a" strokeWidth={3} type="monotone" />
+            {activePoint ? <ReferenceLine x={activePoint.date} stroke="#0a0a0a" strokeDasharray="3 6" strokeWidth={1} /> : null}
+            <Line dataKey="totalInvested" dot={false} activeDot={false} name="Investi" stroke="#b86a00" strokeWidth={2.2} type="monotone" />
+            <Line dataKey="totalMarketValue" dot={false} activeDot={false} name="Valeur" stroke="#0a0a0a" strokeWidth={3} type="monotone" />
           </LineChart>
         </ResponsiveContainer>
       </div>
       <div className="chartRange">
         <span>{formatDate(points[0].date)}</span>
-        <strong>{formatCurrencyCompact(points.at(-1)?.totalMarketValue ?? 0)}</strong>
         <span>{formatDate(points.at(-1)?.date ?? points[0].date)}</span>
       </div>
     </div>
   );
 }
 
-function PortfolioHistoryChart({ dashboard }: { dashboard: Dashboard }) {
-  const points = normalizeHistory(dashboard.history);
+function PortfolioHistoryChart({ dashboard, period }: { dashboard: Dashboard; period: DashboardPeriod }) {
+  const points = filterHistoryByPeriod(normalizeHistory(dashboard.history), period);
   const activePortfolios = dashboard.portfolios.filter((portfolio) => portfolio.marketValue > 0 || portfolio.investedAmount > 0);
   if (points.length < 2 || activePortfolios.length === 0) {
     return <p className="emptyState">L'historique apparaitra apres plusieurs operations valorisees.</p>;
@@ -332,6 +482,19 @@ function normalizeHistory(history: DashboardHistoryPoint[]) {
   return [...history].sort((left, right) => left.date.localeCompare(right.date));
 }
 
+function filterHistoryByPeriod(points: DashboardHistoryPoint[], period: DashboardPeriod) {
+  if (period === "MAX" || points.length === 0) {
+    return points;
+  }
+
+  const latestDate = new Date(`${points.at(-1)?.date}T00:00:00`);
+  const days = period === "1W" ? 7 : period === "1M" ? 30 : 365;
+  const startDate = new Date(latestDate);
+  startDate.setDate(latestDate.getDate() - days);
+  const filtered = points.filter((point) => new Date(`${point.date}T00:00:00`) >= startDate);
+  return filtered.length >= 2 ? filtered : points.slice(-2);
+}
+
 function formatDate(date: string) {
   return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short", year: "2-digit" }).format(new Date(`${date}T00:00:00`));
 }
@@ -357,37 +520,142 @@ function PortfolioTooltip({ active, label, payload }: { active?: boolean; label?
   );
 }
 
-function DashboardWatchlist({ positions, missingPriceCount, ruleAlerts }: { positions: Position[]; missingPriceCount: number; ruleAlerts: RuleAlert[] }) {
+function buildDashboardAlerts(positions: Position[], ruleAlerts: RuleAlert[]): DashboardAlertItem[] {
   const driftedPositions = positions
     .filter((position) => position.targetWeight !== null)
     .sort((left, right) => Math.abs(right.allocationDrift ?? 0) - Math.abs(left.allocationDrift ?? 0))
-    .slice(0, 3);
-  const visibleAlerts = ruleAlerts.slice(0, 5);
+    .slice(0, 5)
+    .map((position) => ({
+      id: `allocation-${position.portfolioId}-${position.assetId}`,
+      title: position.assetName,
+      message: `${position.portfolioName} - ecart ${formatPercent(position.allocationDrift ?? 0)} vs cible.`,
+      severity: Math.abs(position.allocationDrift ?? 0) >= 0.08 ? "Warning" as const : "Info" as const,
+      kind: "allocation" as const
+    }));
+  const missingPriceAlerts = positions
+    .filter((position) => !position.hasMarketPrice)
+    .map((position) => ({
+      id: `price-${position.portfolioId}-${position.assetId}`,
+      title: position.assetName,
+      message: "Cours manquant, ligne estimee au PRU.",
+      severity: "Warning" as const,
+      kind: "price" as const
+    }));
+  const ruleItems = ruleAlerts.map((alert) => ({
+    id: `rule-${alert.ruleId}-${alert.portfolioId ?? "all"}-${alert.assetId ?? "all"}`,
+    title: alert.assetName ?? alert.portfolioName ?? alert.ruleName,
+    message: alert.message,
+    severity: alert.severity,
+    kind: "rule" as const
+  }));
+
+  return [...ruleItems, ...missingPriceAlerts, ...driftedPositions].sort((left, right) => severityRank(right.severity) - severityRank(left.severity));
+}
+
+function severityRank(severity: DashboardAlertItem["severity"]) {
+  return severity === "Critical" ? 3 : severity === "Warning" ? 2 : 1;
+}
+
+function DashboardAttentionSummary({ alerts, onOpenDetails }: { alerts: DashboardAlertItem[]; onOpenDetails: () => void }) {
+  const criticalCount = alerts.filter((alert) => alert.severity === "Critical").length;
+  const warningCount = alerts.filter((alert) => alert.severity === "Warning").length;
+  const firstAlerts = alerts.slice(0, 3);
 
   return (
-    <div className="watchList">
-      {visibleAlerts.map((alert) => (
-        <div className={`watchItem watchItem-${alert.severity.toLowerCase()}`} key={`${alert.ruleId}-${alert.portfolioId ?? "all"}-${alert.assetId ?? "all"}`}>
-          <strong>{alert.assetName ?? alert.portfolioName ?? alert.ruleName}</strong>
-          <span>{alert.message}</span>
+    <div className="attentionSummary">
+      <div className="attentionHero">
+        <strong>{alerts.length}</strong>
+        <span>{alerts.length > 1 ? "signaux actifs" : "signal actif"}</span>
+      </div>
+      {alerts.length > 0 ? (
+        <div className="attentionBadges">
+          {criticalCount > 0 ? <span className="attentionBadge critical">{criticalCount} critique(s)</span> : null}
+          {warningCount > 0 ? <span className="attentionBadge warning">{warningCount} attention</span> : null}
+          <span className="attentionBadge">{alerts.length - criticalCount - warningCount} info</span>
         </div>
-      ))}
-      {missingPriceCount > 0 ? (
-        <div className="watchItem watchItem-warning">
-          <strong>Cours manquants</strong>
-          <span>{missingPriceCount} ligne(s) utilisent encore le PRU.</span>
+      ) : (
+        <p className="emptyState">Aucun signal prioritaire pour le moment.</p>
+      )}
+      {firstAlerts.length > 0 ? (
+        <div className="attentionPreview">
+          {firstAlerts.map((alert) => (
+            <article className={`attentionLine attentionLine-${alert.severity.toLowerCase()}`} key={alert.id}>
+              <strong>{alert.title}</strong>
+              <span>{alert.message}</span>
+            </article>
+          ))}
         </div>
       ) : null}
-      {driftedPositions.map((position) => (
-        <div className="watchItem" key={`${position.portfolioId}-${position.assetId}`}>
-          <strong>{position.assetName}</strong>
-          <span>{position.portfolioName} - ecart {formatPercent(position.allocationDrift ?? 0)} vs cible.</span>
-        </div>
-      ))}
-      {visibleAlerts.length === 0 && driftedPositions.length === 0 && missingPriceCount === 0 ? (
-        <p className="emptyState">Les ecarts et alertes apparaitront apres configuration des cles et regles.</p>
-      ) : null}
+      <button className="ghostButton secondaryButton" disabled={alerts.length === 0} onClick={onOpenDetails} type="button">
+        Voir tout
+      </button>
     </div>
+  );
+}
+
+function DashboardAlertList({ alerts }: { alerts: DashboardAlertItem[] }) {
+  if (alerts.length === 0) {
+    return <p className="emptyState">Aucune alerte active.</p>;
+  }
+
+  return (
+    <div className="drawerList">
+      {alerts.map((alert) => (
+        <article className={`watchItem watchItem-${alert.severity.toLowerCase()}`} key={alert.id}>
+          <strong>{alert.title}</strong>
+          <span>{alert.message}</span>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function AllocationSummary({ portfolios, positions, onOpenDetails }: { portfolios: PortfolioSummary[]; positions: Position[]; onOpenDetails: () => void }) {
+  const mainPortfolioDrift = portfolios[0];
+  const mainLineDrift = positions[0];
+  const configuredLineCount = positions.filter((position) => position.targetWeight !== null).length;
+
+  return (
+    <div className="allocationSummary">
+      <div className="allocationSummaryHero">
+        <span>Ecart principal</span>
+        <strong>{mainPortfolioDrift ? formatPercent(mainPortfolioDrift.allocationDrift) : "-"}</strong>
+        <small>{mainPortfolioDrift?.name ?? "Aucune cle globale"}</small>
+      </div>
+      <div className="allocationQuickList">
+        {mainLineDrift ? (
+          <article>
+            <strong>{mainLineDrift.assetName}</strong>
+            <span>{formatPercent(mainLineDrift.allocationDrift ?? 0)} vs cible</span>
+          </article>
+        ) : null}
+        <article>
+          <strong>{configuredLineCount}</strong>
+          <span>ligne(s) avec cle cible</span>
+        </article>
+      </div>
+      <button className="ghostButton secondaryButton" onClick={onOpenDetails} type="button">Voir le detail</button>
+    </div>
+  );
+}
+
+function DashboardDrawer({ children, onClose, subtitle, title }: { children: ReactNode; onClose: () => void; subtitle: string; title: string }) {
+  return (
+    <aside className="dashboardDrawerLayer" role="dialog" aria-modal="true" aria-label={title}>
+      <button className="dashboardDrawerBackdrop" onClick={onClose} type="button" aria-label="Fermer" />
+      <div className="dashboardDrawer">
+        <header>
+          <div>
+            <strong>{title}</strong>
+            <span>{subtitle}</span>
+          </div>
+          <button className="actionIconButton" onClick={onClose} type="button" aria-label="Fermer">
+            <X size={18} />
+          </button>
+        </header>
+        <div className="dashboardDrawerContent">{children}</div>
+      </div>
+    </aside>
   );
 }
 
