@@ -33,8 +33,6 @@ public sealed class MarketPriceRefreshService(
             .Select(asset => asset.Id)
             .ToHashSet();
 
-        await BackfillHistoricalPricesAsync(assets, transactions, refreshedPrices, refreshableAssetIds, cancellationToken);
-
         foreach (var asset in assets.Where(asset => heldAssetIds.Contains(asset.Id) && refreshableAssetIds.Contains(asset.Id)))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -93,6 +91,8 @@ public sealed class MarketPriceRefreshService(
             latestPriceByAssetId[asset.Id] = existingQuoteForDate;
         }
 
+        await BackfillHistoricalPricesAsync(assets, transactions, refreshedPrices, refreshableAssetIds, cancellationToken);
+
         return refreshedPrices
             .Where(price => refreshableAssetIds.Contains(price.AssetId)
                 || !price.Source.StartsWith("yahoo-finance", StringComparison.OrdinalIgnoreCase))
@@ -142,6 +142,11 @@ public sealed class MarketPriceRefreshService(
             return await NormalizeQuoteAsync(asset, directQuote, targetCurrency, cancellationToken);
         }
 
+        if (!string.IsNullOrWhiteSpace(asset.MarketSymbol))
+        {
+            return null;
+        }
+
         if (string.IsNullOrWhiteSpace(asset.Isin))
         {
             return null;
@@ -179,7 +184,7 @@ public sealed class MarketPriceRefreshService(
     {
         var quoteSymbol = string.IsNullOrWhiteSpace(asset.MarketSymbol) ? asset.Symbol : asset.MarketSymbol;
         var directQuotes = await marketDataProvider.GetDailyQuotesAsync(quoteSymbol, from, to, cancellationToken);
-        if (directQuotes.Count > 0 || string.IsNullOrWhiteSpace(asset.Isin))
+        if (directQuotes.Count > 0 || !string.IsNullOrWhiteSpace(asset.MarketSymbol) || string.IsNullOrWhiteSpace(asset.Isin))
         {
             return directQuotes;
         }

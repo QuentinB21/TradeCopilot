@@ -1,3 +1,5 @@
+using TradeCopilot.Application.Contracts.Rules;
+
 namespace TradeCopilot.Application.Contracts.InvestmentPlans;
 
 public sealed record InvestmentLineRecommendationDto(
@@ -7,4 +9,5 @@ public sealed record InvestmentLineRecommendationDto(
     decimal Amount,
     decimal TargetWeight,
     decimal? CurrentWeight,
-    string Rationale);
+    string Rationale,
+    IReadOnlyList<RuleImpactDto> RuleImpacts);

@@ -1,4 +1,5 @@
 using TradeCopilot.Application.Contracts.Positions;
+using TradeCopilot.Application.Contracts.Rules;
 
 namespace TradeCopilot.Application.Contracts.Dashboard;
 
@@ -9,7 +10,8 @@ public sealed record DashboardDto(
     decimal TotalUnrealizedGainPercent,
     IReadOnlyList<PortfolioSummaryDto> Portfolios,
     IReadOnlyList<PositionDto> Positions,
-    IReadOnlyList<DashboardHistoryPointDto> History);
+    IReadOnlyList<DashboardHistoryPointDto> History,
+    IReadOnlyList<RuleAlertDto> RuleAlerts);
 
 public sealed record DashboardHistoryPointDto(
     DateOnly Date,

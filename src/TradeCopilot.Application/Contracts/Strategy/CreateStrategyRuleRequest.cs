@@ -7,5 +7,6 @@ public sealed record CreateStrategyRuleRequest(
     string Description,
     string? TriggerCondition,
     string RecommendedAction,
+    RuleDefinitionDto? Definition,
     int Priority,
     bool IsActive);

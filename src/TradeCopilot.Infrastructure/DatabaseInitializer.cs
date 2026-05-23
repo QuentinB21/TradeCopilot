@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.EntityFrameworkCore;
 
 namespace TradeCopilot.Infrastructure;
 
@@ -16,9 +17,25 @@ public sealed class DatabaseInitializer(IServiceProvider serviceProvider) : IHos
         }
 
         await dbContext.Database.EnsureCreatedAsync(cancellationToken);
+        await EnsureJsonRuleDefinitionColumnAsync(dbContext, cancellationToken);
 
         // The application must start empty; demo data belongs to tests only.
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    private static async Task EnsureJsonRuleDefinitionColumnAsync(TradeCopilotDbContext dbContext, CancellationToken cancellationToken)
+    {
+        if (!dbContext.Database.IsRelational())
+        {
+            return;
+        }
+
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            ALTER TABLE "StrategyRules"
+            ADD COLUMN IF NOT EXISTS "DefinitionJson" jsonb NULL;
+            """,
+            cancellationToken);
+    }
 }

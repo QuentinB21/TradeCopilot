@@ -11,6 +11,7 @@ public sealed class StrategyRule
     public required string Description { get; set; }
     public string? TriggerCondition { get; set; }
     public required string RecommendedAction { get; set; }
+    public string? DefinitionJson { get; set; }
     public int Priority { get; set; }
     public bool IsActive { get; set; } = true;
 }

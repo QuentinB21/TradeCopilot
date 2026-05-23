@@ -8,6 +8,7 @@ using TradeCopilot.Application.Services.MarketData;
 using TradeCopilot.Application.Services.Portfolios;
 using TradeCopilot.Application.Services.Positions;
 using TradeCopilot.Application.Services.Prices;
+using TradeCopilot.Application.Services.Rules;
 using TradeCopilot.Application.Services.Strategy;
 using TradeCopilot.Application.Services.Transactions;
 
@@ -20,6 +21,7 @@ public static class DependencyInjection
         services.AddSingleton<PositionCalculator>();
         services.AddSingleton<DashboardService>();
         services.AddSingleton<MonthlyInvestmentPlanner>();
+        services.AddSingleton<RuleEvaluationService>();
         services.AddScoped<IPortfolioService, PortfolioService>();
         services.AddScoped<IAssetService, AssetService>();
         services.AddScoped<IRepartitionService, RepartitionService>();

@@ -11,7 +11,7 @@ import { QueryState } from "../components/QueryState";
 import { readDashboardRefreshInterval } from "../lib/appSettings";
 import { formatCurrencyCompact, formatPercent } from "../lib/format";
 import { formatStrategicStatus } from "../domain/options";
-import type { Dashboard, DashboardHistoryPoint, PortfolioSummary, Position } from "../domain/types";
+import type { Dashboard, DashboardHistoryPoint, PortfolioSummary, Position, RuleAlert } from "../domain/types";
 
 const chartColors = ["#0a0a0a", "#155eef", "#0b7a48", "#b86a00", "#c22a2a", "#525252", "#7c3aed", "#0f766e"];
 
@@ -136,7 +136,7 @@ function DashboardContent({ dashboard }: { dashboard: Dashboard }) {
           <TotalValueChart history={dashboard.history} />
         </Panel>
         <Panel title="A surveiller" subtitle="Ecarts qui meritent une action" className="watchPanel">
-          <DashboardWatchlist positions={dashboard.positions} missingPriceCount={missingPriceCount} />
+          <DashboardWatchlist positions={dashboard.positions} missingPriceCount={missingPriceCount} ruleAlerts={dashboard.ruleAlerts} />
         </Panel>
       </section>
 
@@ -357,14 +357,21 @@ function PortfolioTooltip({ active, label, payload }: { active?: boolean; label?
   );
 }
 
-function DashboardWatchlist({ positions, missingPriceCount }: { positions: Position[]; missingPriceCount: number }) {
+function DashboardWatchlist({ positions, missingPriceCount, ruleAlerts }: { positions: Position[]; missingPriceCount: number; ruleAlerts: RuleAlert[] }) {
   const driftedPositions = positions
     .filter((position) => position.targetWeight !== null)
     .sort((left, right) => Math.abs(right.allocationDrift ?? 0) - Math.abs(left.allocationDrift ?? 0))
     .slice(0, 3);
+  const visibleAlerts = ruleAlerts.slice(0, 5);
 
   return (
     <div className="watchList">
+      {visibleAlerts.map((alert) => (
+        <div className={`watchItem watchItem-${alert.severity.toLowerCase()}`} key={`${alert.ruleId}-${alert.portfolioId ?? "all"}-${alert.assetId ?? "all"}`}>
+          <strong>{alert.assetName ?? alert.portfolioName ?? alert.ruleName}</strong>
+          <span>{alert.message}</span>
+        </div>
+      ))}
       {missingPriceCount > 0 ? (
         <div className="watchItem watchItem-warning">
           <strong>Cours manquants</strong>
@@ -377,7 +384,9 @@ function DashboardWatchlist({ positions, missingPriceCount }: { positions: Posit
           <span>{position.portfolioName} - ecart {formatPercent(position.allocationDrift ?? 0)} vs cible.</span>
         </div>
       ))}
-      {driftedPositions.length === 0 ? <p className="emptyState">Les ecarts apparaitront apres configuration des cles par ligne.</p> : null}
+      {visibleAlerts.length === 0 && driftedPositions.length === 0 && missingPriceCount === 0 ? (
+        <p className="emptyState">Les ecarts et alertes apparaitront apres configuration des cles et regles.</p>
+      ) : null}
     </div>
   );
 }

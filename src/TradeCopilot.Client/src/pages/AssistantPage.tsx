@@ -45,6 +45,16 @@ export function AssistantPage() {
                       <div>
                         <strong>{line.assetName}</strong>
                         <span>{line.symbol}</span>
+                        <span>{line.rationale}</span>
+                        {line.ruleImpacts.length > 0 ? (
+                          <div className="ruleImpactList">
+                            {line.ruleImpacts.map((impact) => (
+                              <span className={`ruleImpact ruleImpact-${impact.severity.toLowerCase()}`} key={impact.ruleId}>
+                                {impact.ruleName}: {impact.message}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
                       </div>
                       <div className="rightText">
                         <strong>{formatCurrency(line.amount)}</strong>

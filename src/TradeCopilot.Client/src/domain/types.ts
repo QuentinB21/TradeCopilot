@@ -136,6 +136,7 @@ export type Dashboard = {
   portfolios: PortfolioSummary[];
   positions: Position[];
   history: DashboardHistoryPoint[];
+  ruleAlerts: RuleAlert[];
 };
 
 export type MonthlyInvestmentPlan = {
@@ -152,6 +153,7 @@ export type MonthlyInvestmentPlan = {
       targetWeight: number;
       currentWeight: number | null;
       rationale: string;
+      ruleImpacts: RuleImpact[];
     }[];
   }[];
   notes: string[];
@@ -177,6 +179,7 @@ export type StrategyRule = {
   description: string;
   triggerCondition: string | null;
   recommendedAction: string;
+  definition: RuleDefinition | null;
   priority: number;
   isActive: boolean;
 };
@@ -184,6 +187,66 @@ export type StrategyRule = {
 export type Strategy = {
   globalAllocation: { envelope: string; targetWeight: number }[];
   rules: StrategyRule[];
+};
+
+export type RuleTargetType = "Asset" | "Portfolio" | "Position";
+export type RuleTargetMode = "All" | "Specific" | "PortfolioAssets";
+export type RuleConditionMetric = "Always" | "PriceChangePercent" | "AllocationDrift" | "UnrealizedGainPercent";
+export type RuleComparisonOperator = "LessThanOrEqual" | "GreaterThanOrEqual" | "Equal";
+export type RuleValueUnit = "None" | "Percent" | "PercentPoint";
+export type RuleTimeUnit = "Day" | "Week" | "Month" | "Year";
+export type RuleEffectType = "AlertOnly" | "BlockBuy" | "ReduceBuy" | "PrioritizeBuy" | "RequireReview";
+export type RuleEffectStrength = "Soft" | "Hard";
+export type RuleSeverity = "Info" | "Warning" | "Critical";
+
+export type RuleDefinition = {
+  version: number;
+  target: {
+    type: RuleTargetType;
+    mode: RuleTargetMode;
+    portfolioId: string | null;
+    assetId: string | null;
+  };
+  condition: {
+    metric: RuleConditionMetric;
+    operator: RuleComparisonOperator;
+    value: number | null;
+    unit: RuleValueUnit;
+    period: {
+      amount: number;
+      unit: RuleTimeUnit;
+    } | null;
+  };
+  effect: {
+    type: RuleEffectType;
+    strength: RuleEffectStrength;
+    severity: RuleSeverity;
+    message: string;
+  };
+};
+
+export type RuleAlert = {
+  ruleId: string;
+  ruleName: string;
+  severity: RuleSeverity;
+  portfolioId: string | null;
+  portfolioName: string | null;
+  assetId: string | null;
+  assetName: string | null;
+  message: string;
+  explanation: string;
+  measuredValue: number | null;
+  thresholdValue: number | null;
+};
+
+export type RuleImpact = {
+  ruleId: string;
+  ruleName: string;
+  effectType: RuleEffectType;
+  strength: RuleEffectStrength;
+  severity: RuleSeverity;
+  message: string;
+  explanation: string;
 };
 
 export type CreatePortfolioPayload = Omit<Portfolio, "id">;

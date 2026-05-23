@@ -133,6 +133,7 @@ public sealed class TradeCopilotDbContext(DbContextOptions<TradeCopilotDbContext
             entity.Property(rule => rule.Description).HasMaxLength(1200);
             entity.Property(rule => rule.TriggerCondition).HasMaxLength(800);
             entity.Property(rule => rule.RecommendedAction).HasMaxLength(1200);
+            entity.Property(rule => rule.DefinitionJson).HasColumnType("jsonb");
         });
     }
 }

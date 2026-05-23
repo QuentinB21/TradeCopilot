@@ -8,5 +8,6 @@ public sealed record StrategyRuleDto(
     string Description,
     string? TriggerCondition,
     string RecommendedAction,
+    RuleDefinitionDto? Definition,
     int Priority,
     bool IsActive);

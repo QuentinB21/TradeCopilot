@@ -1,4 +1,5 @@
 using TradeCopilot.Application.Contracts.Dashboard;
+using TradeCopilot.Application.Contracts.Rules;
 using TradeCopilot.Domain;
 
 namespace TradeCopilot.Application;
@@ -10,7 +11,8 @@ public sealed class DashboardService(PositionCalculator positionCalculator)
         IReadOnlyList<Asset> assets,
         IReadOnlyList<Transaction> transactions,
         IReadOnlyList<AssetPrice> prices,
-        IReadOnlyList<Repartition> repartitions)
+        IReadOnlyList<Repartition> repartitions,
+        IReadOnlyList<RuleAlertDto>? ruleAlerts = null)
     {
         var positions = positionCalculator.Calculate(portfolios, assets, transactions, prices, repartitions);
         var totalMarketValue = positions.Sum(position => position.MarketValue);
@@ -26,7 +28,8 @@ public sealed class DashboardService(PositionCalculator positionCalculator)
             totalInvested > 0m ? decimal.Round(totalGain / totalInvested, 4, MidpointRounding.AwayFromZero) : 0m,
             portfolioSummaries,
             positions.OrderBy(position => position.PortfolioName).ThenByDescending(position => position.MarketValue).ToList(),
-            history);
+            history,
+            ruleAlerts ?? []);
     }
 
     private static IReadOnlyList<PortfolioSummaryDto> BuildPortfolioSummaries(

@@ -18,15 +18,29 @@ public sealed class StrategyRulesController(IStrategyRuleService strategyRuleSer
     [HttpPost]
     public async Task<ActionResult<StrategyRuleDto>> CreateStrategyRule(CreateStrategyRuleRequest request, CancellationToken cancellationToken)
     {
-        var rule = await strategyRuleService.CreateStrategyRuleAsync(request, cancellationToken);
-        return Created($"/api/strategy-rules/{rule.Id}", rule);
+        try
+        {
+            var rule = await strategyRuleService.CreateStrategyRuleAsync(request, cancellationToken);
+            return Created($"/api/strategy-rules/{rule.Id}", rule);
+        }
+        catch (ArgumentException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
     }
 
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<StrategyRuleDto>> UpdateStrategyRule(Guid id, UpdateStrategyRuleRequest request, CancellationToken cancellationToken)
     {
-        var rule = await strategyRuleService.UpdateStrategyRuleAsync(id, request, cancellationToken);
-        return rule is null ? NotFound() : Ok(rule);
+        try
+        {
+            var rule = await strategyRuleService.UpdateStrategyRuleAsync(id, request, cancellationToken);
+            return rule is null ? NotFound() : Ok(rule);
+        }
+        catch (ArgumentException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
     }
 
     [HttpDelete("{id:guid}")]

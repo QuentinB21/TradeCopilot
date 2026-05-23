@@ -26,6 +26,7 @@ public sealed class StrategyService(IInvestmentRepository repository) : IStrateg
                     rule.Description,
                     rule.TriggerCondition,
                     rule.RecommendedAction,
+                    StrategyRuleService.DeserializeDefinition(rule.DefinitionJson),
                     rule.Priority,
                     rule.IsActive))
                 .ToList());

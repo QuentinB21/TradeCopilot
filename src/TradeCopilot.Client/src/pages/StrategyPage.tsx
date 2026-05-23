@@ -4,7 +4,24 @@ import { tradeCopilotApi } from "../api/tradeCopilotApi";
 import { ActionIconButton } from "../components/ActionIconButton";
 import { DecimalInput } from "../components/DecimalInput";
 import { assetTypeOptions, formatRepartitionStatus, formatStrategicStatus, portfolioTypes, repartitionStatusOptions, strategicStatusOptions } from "../domain/options";
-import type { Asset, CreateAssetPayload, CreatePortfolioPayload, CreateRepartitionPayload, CreateStrategyRulePayload, Portfolio, Repartition, StrategyRule, UpdateRepartitionPayload } from "../domain/types";
+import type {
+  Asset,
+  CreateAssetPayload,
+  CreatePortfolioPayload,
+  CreateRepartitionPayload,
+  CreateStrategyRulePayload,
+  Portfolio,
+  Repartition,
+  RuleComparisonOperator,
+  RuleConditionMetric,
+  RuleDefinition,
+  RuleEffectStrength,
+  RuleEffectType,
+  RuleSeverity,
+  RuleTimeUnit,
+  StrategyRule,
+  UpdateRepartitionPayload
+} from "../domain/types";
 import { formatPercent } from "../lib/format";
 import { parseDecimalInput, parseNullableDecimalInput, toNumberInput } from "../lib/numberInput";
 import { PageHeader } from "../components/PageHeader";
@@ -24,9 +41,83 @@ type RepartitionForm = Omit<CreateRepartitionPayload, "targetWeight" | "minWeigh
   maxWeight: string;
 };
 
-type StrategyRuleForm = Omit<CreateStrategyRulePayload, "priority"> & {
-  priority: string;
+type StrategyRuleForm = {
+  name: string;
+  description: string;
+  priorityLevel: RulePriorityLevel;
+  isActive: boolean;
+  targetScope: "AllAssets" | "SpecificAsset" | "PortfolioAssets";
+  portfolioId: string;
+  assetId: string;
+  metric: RuleConditionMetric;
+  operator: RuleComparisonOperator;
+  value: string;
+  periodAmount: string;
+  periodUnit: RuleTimeUnit;
+  effectType: RuleEffectType;
+  effectStrength: RuleEffectStrength;
+  severity: RuleSeverity;
+  message: string;
 };
+
+type RulePriorityLevel = "High" | "Normal" | "Low";
+
+type RuleOption<T extends string> = {
+  value: T;
+  label: string;
+  detail?: string;
+};
+
+const ruleTargetScopeOptions: RuleOption<StrategyRuleForm["targetScope"]>[] = [
+  { value: "AllAssets", label: "Tous les actifs", detail: "La regle est evaluee sur chaque ligne suivie." },
+  { value: "SpecificAsset", label: "Un actif precis", detail: "La regle cible uniquement l'actif choisi." },
+  { value: "PortfolioAssets", label: "Les actifs d'un portefeuille", detail: "La regle cible les lignes d'une enveloppe." }
+];
+
+const ruleMetricOptions: RuleOption<RuleConditionMetric>[] = [
+  { value: "Always", label: "Toujours actif" },
+  { value: "PriceChangePercent", label: "Variation du cours" },
+  { value: "AllocationDrift", label: "Ecart a la cible" },
+  { value: "UnrealizedGainPercent", label: "Gain latent" }
+];
+
+const ruleOperatorOptions: RuleOption<RuleComparisonOperator>[] = [
+  { value: "LessThanOrEqual", label: "Inferieur ou egal" },
+  { value: "GreaterThanOrEqual", label: "Superieur ou egal" },
+  { value: "Equal", label: "Egal" }
+];
+
+const ruleTimeUnitOptions: RuleOption<RuleTimeUnit>[] = [
+  { value: "Day", label: "jours" },
+  { value: "Week", label: "semaines" },
+  { value: "Month", label: "mois" },
+  { value: "Year", label: "annees" }
+];
+
+const ruleEffectOptions: RuleOption<RuleEffectType>[] = [
+  { value: "AlertOnly", label: "Alerter uniquement", detail: "Affiche un signal sans modifier l'assistant." },
+  { value: "BlockBuy", label: "Ne pas acheter", detail: "Met la proposition d'achat a zero." },
+  { value: "ReduceBuy", label: "Acheter moins", detail: "Reduit le poids dans l'assistant." },
+  { value: "PrioritizeBuy", label: "Prioriser l'achat", detail: "Augmente le poids dans l'assistant." },
+  { value: "RequireReview", label: "Demander verification", detail: "Conserve le montant mais marque la ligne." }
+];
+
+const ruleStrengthOptions: RuleOption<RuleEffectStrength>[] = [
+  { value: "Soft", label: "Souple" },
+  { value: "Hard", label: "Forte" }
+];
+
+const ruleSeverityOptions: RuleOption<RuleSeverity>[] = [
+  { value: "Info", label: "Information" },
+  { value: "Warning", label: "Attention" },
+  { value: "Critical", label: "Critique" }
+];
+
+const rulePriorityOptions: RuleOption<RulePriorityLevel>[] = [
+  { value: "High", label: "Haute", detail: "S'applique avant les autres regles." },
+  { value: "Normal", label: "Normale", detail: "Ordre standard pour la plupart des regles." },
+  { value: "Low", label: "Basse", detail: "S'applique apres les regles plus importantes." }
+];
 
 type StrategySection = "overview" | "portfolios" | "assets" | "allocation" | "rules";
 type StrategyEditor = "portfolio" | "asset" | "allocation" | "rule" | null;
@@ -70,18 +161,166 @@ const emptyRepartition: RepartitionForm = {
 };
 
 const emptyStrategyRule: StrategyRuleForm = {
-  portfolioId: null,
-  assetId: null,
   name: "",
   description: "",
-  triggerCondition: "",
-  recommendedAction: "",
-  priority: "100",
-  isActive: true
+  priorityLevel: "Normal",
+  isActive: true,
+  targetScope: "AllAssets",
+  portfolioId: "",
+  assetId: "",
+  metric: "PriceChangePercent",
+  operator: "LessThanOrEqual",
+  value: "10",
+  periodAmount: "1",
+  periodUnit: "Month",
+  effectType: "RequireReview",
+  effectStrength: "Soft",
+  severity: "Warning",
+  message: "Verifier la ligne avant toute decision."
 };
 
 function errorText(error: unknown) {
   return error instanceof Error ? error.message : "Operation impossible pour le moment.";
+}
+
+function labelFor<T extends string>(options: RuleOption<T>[], value: T) {
+  return options.find((option) => option.value === value)?.label ?? value;
+}
+
+function priorityLevelFromValue(priority: number): RulePriorityLevel {
+  if (priority <= 50) {
+    return "High";
+  }
+
+  if (priority >= 150) {
+    return "Low";
+  }
+
+  return "Normal";
+}
+
+function priorityValueFromLevel(level: RulePriorityLevel) {
+  return level === "High" ? 10 : level === "Low" ? 200 : 100;
+}
+
+function hydrateStrategyRuleForm(rule: StrategyRule): StrategyRuleForm {
+  const definition = rule.definition;
+  const targetScope = definition?.target.mode === "Specific"
+    ? "SpecificAsset"
+    : definition?.target.mode === "PortfolioAssets"
+    ? "PortfolioAssets"
+    : "AllAssets";
+
+  return {
+    name: rule.name,
+    description: rule.description,
+    priorityLevel: priorityLevelFromValue(rule.priority),
+    isActive: rule.isActive,
+    targetScope,
+    portfolioId: definition?.target.portfolioId ?? rule.portfolioId ?? "",
+    assetId: definition?.target.assetId ?? rule.assetId ?? "",
+    metric: definition?.condition.metric ?? "PriceChangePercent",
+    operator: definition?.condition.operator ?? "LessThanOrEqual",
+    value: definition?.condition.value == null ? "" : toNumberInput(definition.condition.value * 100),
+    periodAmount: definition?.condition.period ? toNumberInput(definition.condition.period.amount) : "1",
+    periodUnit: definition?.condition.period?.unit ?? "Month",
+    effectType: definition?.effect.type ?? "RequireReview",
+    effectStrength: definition?.effect.strength ?? "Soft",
+    severity: definition?.effect.severity ?? "Warning",
+    message: definition?.effect.message ?? rule.recommendedAction
+  };
+}
+
+function buildRuleDefinition(form: StrategyRuleForm): RuleDefinition {
+  const isAlways = form.metric === "Always";
+  const targetPortfolioId = form.targetScope === "PortfolioAssets" ? form.portfolioId || null : null;
+  const targetAssetId = form.targetScope === "SpecificAsset" ? form.assetId || null : null;
+
+  return {
+    version: 1,
+    target: {
+      type: "Asset",
+      mode: form.targetScope === "SpecificAsset" ? "Specific" : form.targetScope === "PortfolioAssets" ? "PortfolioAssets" : "All",
+      portfolioId: targetPortfolioId,
+      assetId: targetAssetId
+    },
+    condition: {
+      metric: form.metric,
+      operator: form.operator,
+      value: isAlways ? null : parseDecimalInput(form.value) / 100,
+      unit: isAlways ? "None" : "Percent",
+      period: form.metric === "PriceChangePercent"
+        ? { amount: Math.max(1, Math.trunc(parseDecimalInput(form.periodAmount, 1))), unit: form.periodUnit }
+        : null
+    },
+    effect: {
+      type: form.effectType,
+      strength: form.effectStrength,
+      severity: form.severity,
+      message: form.message.trim()
+    }
+  };
+}
+
+function describeRuleCondition(form: StrategyRuleForm) {
+  if (form.metric === "Always") {
+    return "Toujours active";
+  }
+
+  const metric = labelFor(ruleMetricOptions, form.metric).toLowerCase();
+  const operator = labelFor(ruleOperatorOptions, form.operator).toLowerCase();
+  const period = form.metric === "PriceChangePercent"
+    ? ` sur ${parseDecimalInput(form.periodAmount, 1)} ${labelFor(ruleTimeUnitOptions, form.periodUnit)}`
+    : "";
+  return `${metric} ${operator} ${parseDecimalInput(form.value)} %${period}`;
+}
+
+function describeRuleTarget(form: StrategyRuleForm, portfolioById: Map<string, Portfolio>, assetById: Map<string, Asset>) {
+  if (form.targetScope === "SpecificAsset") {
+    return assetById.get(form.assetId)?.name ?? "Actif a choisir";
+  }
+
+  if (form.targetScope === "PortfolioAssets") {
+    return `Actifs de ${portfolioById.get(form.portfolioId)?.name ?? "portefeuille a choisir"}`;
+  }
+
+  return "Tous les actifs suivis";
+}
+
+function buildStrategyRulePayload(form: StrategyRuleForm, portfolioById: Map<string, Portfolio>, assetById: Map<string, Asset>): CreateStrategyRulePayload {
+  const definition = buildRuleDefinition(form);
+  const condition = describeRuleCondition(form);
+  return {
+    portfolioId: definition.target.portfolioId,
+    assetId: definition.target.assetId,
+    name: form.name.trim(),
+    description: form.description.trim(),
+    triggerCondition: `${describeRuleTarget(form, portfolioById, assetById)} - ${condition}`,
+    recommendedAction: form.message.trim(),
+    definition,
+    priority: priorityValueFromLevel(form.priorityLevel),
+    isActive: form.isActive
+  };
+}
+
+function isStrategyRuleFormInvalid(form: StrategyRuleForm) {
+  if (!form.name.trim() || !form.description.trim() || !form.message.trim()) {
+    return true;
+  }
+
+  if (form.targetScope === "SpecificAsset" && !form.assetId) {
+    return true;
+  }
+
+  if (form.targetScope === "PortfolioAssets" && !form.portfolioId) {
+    return true;
+  }
+
+  if (form.metric !== "Always" && form.value.trim() === "") {
+    return true;
+  }
+
+  return form.metric === "PriceChangePercent" && parseDecimalInput(form.periodAmount, 0) <= 0;
 }
 
 export function StrategyPage() {
@@ -131,6 +370,7 @@ export function StrategyPage() {
   const isProjectedPortfolioWeightInvalid = projectedPortfolioWeight > 1.000001;
   const isPortfolioWeightOverTarget = totalPortfolioWeight > 1.000001;
   const activeRulesCount = strategyRules.filter((rule) => rule.isActive).length;
+  const isRuleFormInvalid = isStrategyRuleFormInvalid(strategyRuleForm);
   const portfolioPagination = usePagination(portfolios);
   const assetPagination = usePagination(assets);
   const allocationPagination = usePagination(visibleRepartitions);
@@ -281,16 +521,7 @@ export function StrategyPage() {
     activateEditor("rule");
     setActiveSection("rules");
     setEditingStrategyRuleId(rule.id);
-    setStrategyRuleForm({
-      portfolioId: rule.portfolioId,
-      assetId: rule.assetId,
-      name: rule.name,
-      description: rule.description,
-      triggerCondition: rule.triggerCondition,
-      recommendedAction: rule.recommendedAction,
-      priority: toNumberInput(rule.priority),
-      isActive: rule.isActive
-    });
+    setStrategyRuleForm(hydrateStrategyRuleForm(rule));
   };
 
   const savePortfolio = useMutation({
@@ -351,10 +582,7 @@ export function StrategyPage() {
   const deleteRepartition = useMutation({ mutationFn: tradeCopilotApi.deleteRepartition, onSuccess: invalidateConfiguration });
   const saveStrategyRule = useMutation({
     mutationFn: () => {
-      const payload: CreateStrategyRulePayload = {
-        ...strategyRuleForm,
-        priority: parseDecimalInput(strategyRuleForm.priority, 100)
-      };
+      const payload = buildStrategyRulePayload(strategyRuleForm, portfolioById, assetById);
       return editingStrategyRuleId
         ? tradeCopilotApi.updateStrategyRule(editingStrategyRuleId, payload)
         : tradeCopilotApi.createStrategyRule(payload);
@@ -594,13 +822,110 @@ export function StrategyPage() {
               <form className="form" onSubmit={(event) => { event.preventDefault(); saveStrategyRule.mutate(); }}>
                 <label>Nom<input value={strategyRuleForm.name} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, name: event.target.value })} required /></label>
                 <label>Description<input value={strategyRuleForm.description} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, description: event.target.value })} required /></label>
-                <label>Portefeuille<select value={strategyRuleForm.portfolioId ?? ""} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, portfolioId: event.target.value || null })}><option value="">Tous</option>{portfolios.map((portfolio) => <option value={portfolio.id} key={portfolio.id}>{portfolio.name}</option>)}</select></label>
-                <label>Actif<select value={strategyRuleForm.assetId ?? ""} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, assetId: event.target.value || null })}><option value="">Tous</option>{assets.map((asset) => <option value={asset.id} key={asset.id}>{asset.name} - {asset.symbol}</option>)}</select></label>
-                <label>Condition<input value={strategyRuleForm.triggerCondition ?? ""} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, triggerCondition: event.target.value || null })} /></label>
-                <label>Action recommandee<input value={strategyRuleForm.recommendedAction} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, recommendedAction: event.target.value })} required /></label>
-                <label>Priorite<DecimalInput value={strategyRuleForm.priority} onChange={(value) => setStrategyRuleForm({ ...strategyRuleForm, priority: value })} /></label>
+                <div className="ruleBuilderGrid">
+                  <label>
+                    Cible
+                    <select
+                      value={strategyRuleForm.targetScope}
+                      onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, targetScope: event.target.value as StrategyRuleForm["targetScope"] })}
+                    >
+                      {ruleTargetScopeOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
+                    </select>
+                  </label>
+                  {strategyRuleForm.targetScope === "PortfolioAssets" ? (
+                    <label>
+                      Portefeuille
+                      <select value={strategyRuleForm.portfolioId} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, portfolioId: event.target.value })} required>
+                        <option value="">Selectionner</option>
+                        {portfolios.map((portfolio) => <option value={portfolio.id} key={portfolio.id}>{portfolio.name}</option>)}
+                      </select>
+                    </label>
+                  ) : null}
+                  {strategyRuleForm.targetScope === "SpecificAsset" ? (
+                    <label>
+                      Actif
+                      <select value={strategyRuleForm.assetId} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, assetId: event.target.value })} required>
+                        <option value="">Selectionner</option>
+                        {assets.map((asset) => <option value={asset.id} key={asset.id}>{asset.name} - {asset.symbol}</option>)}
+                      </select>
+                    </label>
+                  ) : null}
+                </div>
+                <div className="ruleBuilderGrid">
+                  <label>
+                    Condition
+                    <select value={strategyRuleForm.metric} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, metric: event.target.value as RuleConditionMetric })}>
+                      {ruleMetricOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
+                    </select>
+                  </label>
+                  {strategyRuleForm.metric !== "Always" ? (
+                    <>
+                      <label>
+                        Operateur
+                        <select value={strategyRuleForm.operator} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, operator: event.target.value as RuleComparisonOperator })}>
+                          {ruleOperatorOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
+                        </select>
+                      </label>
+                      <label>
+                        Seuil en %
+                        <DecimalInput value={strategyRuleForm.value} onChange={(value) => setStrategyRuleForm({ ...strategyRuleForm, value })} />
+                      </label>
+                    </>
+                  ) : null}
+                  {strategyRuleForm.metric === "PriceChangePercent" ? (
+                    <>
+                      <label>
+                        Duree
+                        <DecimalInput min={1} step={1} value={strategyRuleForm.periodAmount} onChange={(value) => setStrategyRuleForm({ ...strategyRuleForm, periodAmount: value })} />
+                      </label>
+                      <label>
+                        Unite
+                        <select value={strategyRuleForm.periodUnit} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, periodUnit: event.target.value as RuleTimeUnit })}>
+                          {ruleTimeUnitOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
+                        </select>
+                      </label>
+                    </>
+                  ) : null}
+                </div>
+                <div className="ruleBuilderGrid">
+                  <label>
+                    Effet assistant
+                    <select value={strategyRuleForm.effectType} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, effectType: event.target.value as RuleEffectType })}>
+                      {ruleEffectOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    Intensite
+                    <select value={strategyRuleForm.effectStrength} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, effectStrength: event.target.value as RuleEffectStrength })}>
+                      {ruleStrengthOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    Alerte
+                    <select value={strategyRuleForm.severity} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, severity: event.target.value as RuleSeverity })}>
+                      {ruleSeverityOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
+                    </select>
+                  </label>
+                </div>
+                <label>
+                  Message affiche
+                  <input value={strategyRuleForm.message} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, message: event.target.value })} required />
+                </label>
+                <div className="rulePreview">
+                  <strong>Apercu logique</strong>
+                  <span>{describeRuleTarget(strategyRuleForm, portfolioById, assetById)} - {describeRuleCondition(strategyRuleForm)}</span>
+                  <span>{labelFor(ruleEffectOptions, strategyRuleForm.effectType)} : {strategyRuleForm.message || "Message a renseigner"}</span>
+                </div>
+                <label>
+                  Ordre d'application
+                  <select value={strategyRuleForm.priorityLevel} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, priorityLevel: event.target.value as RulePriorityLevel })}>
+                    {rulePriorityOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
+                  </select>
+                  <small>{rulePriorityOptions.find((option) => option.value === strategyRuleForm.priorityLevel)?.detail}</small>
+                </label>
+                <label className="checkboxLabel"><input type="checkbox" checked={strategyRuleForm.isActive} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, isActive: event.target.checked })} /> Regle active</label>
                 <div className="formActions">
-                  <button type="submit">{editingStrategyRuleId ? "Mettre a jour" : "Ajouter la regle"}</button>
+                  <button type="submit" disabled={isRuleFormInvalid}>{editingStrategyRuleId ? "Mettre a jour" : "Ajouter la regle"}</button>
                   <button className="secondaryButton" type="button" onClick={() => activateEditor(null)}>Annuler</button>
                 </div>
               </form>
@@ -614,7 +939,12 @@ export function StrategyPage() {
                 <div className={editingStrategyRuleId === rule.id ? "compactRow editingEntity" : "compactRow"} key={rule.id}>
                   <div>
                     <strong>{rule.name}</strong>
-                    <span>{rule.recommendedAction}</span>
+                    <span>{rule.triggerCondition ?? rule.description}</span>
+                    <span>
+                      {rule.definition ? `${labelFor(ruleEffectOptions, rule.definition.effect.type)} - ${labelFor(ruleSeverityOptions, rule.definition.effect.severity)}` : rule.recommendedAction}
+                      {" - Ordre "}
+                      {labelFor(rulePriorityOptions, priorityLevelFromValue(rule.priority)).toLowerCase()}
+                    </span>
                     <span>{rule.portfolioId ? portfolioById.get(rule.portfolioId)?.name : "Tous portefeuilles"} - {rule.assetId ? assetById.get(rule.assetId)?.name : "Tous actifs"}</span>
                   </div>
                   <div className="rowActions">

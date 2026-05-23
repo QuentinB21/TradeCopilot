@@ -985,7 +985,46 @@ th,
 }
 
 .strategyRuleEditor {
-  max-width: 780px;
+  max-width: 980px;
+}
+
+.ruleBuilderGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.rulePreview {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  padding: 12px;
+}
+
+.rulePreview strong,
+.rulePreview span {
+  display: block;
+}
+
+.rulePreview span {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.checkboxLabel {
+  display: inline-flex !important;
+  width: fit-content;
+  align-items: center;
+  grid-template-columns: none !important;
+  gap: 8px !important;
+}
+
+.checkboxLabel input {
+  min-height: 0;
+  width: auto;
+  accent-color: var(--ink);
 }
 
 .allocationToolbar {
@@ -1079,6 +1118,16 @@ th,
 .watchItem-warning {
   border-color: #f2d093;
   background: var(--warning-soft);
+}
+
+.watchItem-critical {
+  border-color: #f2b8b5;
+  background: var(--danger-soft);
+}
+
+.watchItem-info {
+  border-color: #b9cff8;
+  background: rgba(21, 94, 239, 0.08);
 }
 
 .watchItem-positive {
@@ -1744,6 +1793,40 @@ th,
   margin-top: 10px;
 }
 
+.ruleImpactList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.compactRow .ruleImpact {
+  display: inline-flex;
+  width: fit-content;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  padding: 4px 8px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.ruleImpact-warning {
+  border-color: #f2d093 !important;
+  background: var(--warning-soft) !important;
+}
+
+.ruleImpact-critical {
+  border-color: #f2b8b5 !important;
+  background: var(--danger-soft) !important;
+}
+
+.ruleImpact-info {
+  border-color: #b9cff8 !important;
+  background: rgba(21, 94, 239, 0.08) !important;
+}
+
 .notes {
   display: grid;
   gap: 6px;
@@ -1810,10 +1893,10 @@ tbody tr:last-child td {
   background: rgba(21, 94, 239, 0.1);
   color: var(--focus);
   box-sizing: border-box;
-  padding: 1px 9px 0;
+  padding: 0 9px;
   font-size: 11px;
   font-weight: 700;
-  line-height: 1;
+  line-height: 26px;
   white-space: nowrap;
 }
 
