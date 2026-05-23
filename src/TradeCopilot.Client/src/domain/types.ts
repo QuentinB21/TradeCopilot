@@ -192,7 +192,7 @@ export type Strategy = {
 export type RuleTargetType = "Asset" | "Portfolio" | "Position";
 export type RuleTargetMode = "All" | "Specific" | "PortfolioAssets";
 export type RuleConditionMetric = "Always" | "PriceChangePercent" | "AllocationDrift" | "UnrealizedGainPercent";
-export type RuleComparisonOperator = "LessThanOrEqual" | "GreaterThanOrEqual" | "Equal";
+export type RuleComparisonOperator = "LessThanOrEqual" | "GreaterThanOrEqual" | "Equal" | "BetweenInclusive";
 export type RuleValueUnit = "None" | "Percent" | "PercentPoint";
 export type RuleTimeUnit = "Day" | "Week" | "Month" | "Year";
 export type RuleEffectType = "AlertOnly" | "BlockBuy" | "ReduceBuy" | "PrioritizeBuy" | "RequireReview";
@@ -211,6 +211,7 @@ export type RuleDefinition = {
     metric: RuleConditionMetric;
     operator: RuleComparisonOperator;
     value: number | null;
+    upperValue: number | null;
     unit: RuleValueUnit;
     period: {
       amount: number;

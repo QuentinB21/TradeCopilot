@@ -16,6 +16,7 @@ public sealed record RuleConditionDto(
     RuleConditionMetric Metric,
     RuleComparisonOperator Operator,
     decimal? Value,
+    decimal? UpperValue,
     RuleValueUnit Unit,
     RulePeriodDto? Period);
 
@@ -55,7 +56,8 @@ public enum RuleComparisonOperator
 {
     LessThanOrEqual,
     GreaterThanOrEqual,
-    Equal
+    Equal,
+    BetweenInclusive
 }
 
 public enum RuleValueUnit

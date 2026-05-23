@@ -128,6 +128,11 @@ public sealed class StrategyRuleService(IInvestmentRepository repository) : IStr
             throw new ArgumentException("Une condition mesurable doit renseigner un seuil.", nameof(definition));
         }
 
+        if (definition.Condition.Operator == RuleComparisonOperator.BetweenInclusive && definition.Condition.UpperValue is null)
+        {
+            throw new ArgumentException("Une condition entre deux seuils doit renseigner une borne haute.", nameof(definition));
+        }
+
         if (definition.Condition.Metric == RuleConditionMetric.PriceChangePercent && definition.Condition.Period is null)
         {
             throw new ArgumentException("Une condition de variation de prix doit renseigner une periode.", nameof(definition));

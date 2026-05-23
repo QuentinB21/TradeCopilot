@@ -50,8 +50,10 @@ type StrategyRuleForm = {
   portfolioId: string;
   assetId: string;
   metric: RuleConditionMetric;
+  priceMovement: RulePriceMovement;
   operator: RuleComparisonOperator;
   value: string;
+  upperValue: string;
   periodAmount: string;
   periodUnit: RuleTimeUnit;
   effectType: RuleEffectType;
@@ -61,6 +63,7 @@ type StrategyRuleForm = {
 };
 
 type RulePriorityLevel = "High" | "Normal" | "Low";
+type RulePriceMovement = "DropAtLeast" | "DropBetween" | "RiseAtLeast" | "RiseBetween";
 
 type RuleOption<T extends string> = {
   value: T;
@@ -84,7 +87,15 @@ const ruleMetricOptions: RuleOption<RuleConditionMetric>[] = [
 const ruleOperatorOptions: RuleOption<RuleComparisonOperator>[] = [
   { value: "LessThanOrEqual", label: "Inferieur ou egal" },
   { value: "GreaterThanOrEqual", label: "Superieur ou egal" },
-  { value: "Equal", label: "Egal" }
+  { value: "Equal", label: "Egal" },
+  { value: "BetweenInclusive", label: "Entre deux seuils" }
+];
+
+const rulePriceMovementOptions: RuleOption<RulePriceMovement>[] = [
+  { value: "DropBetween", label: "Baisse entre" },
+  { value: "DropAtLeast", label: "Baisse d'au moins" },
+  { value: "RiseBetween", label: "Hausse entre" },
+  { value: "RiseAtLeast", label: "Hausse d'au moins" }
 ];
 
 const ruleTimeUnitOptions: RuleOption<RuleTimeUnit>[] = [
@@ -169,8 +180,10 @@ const emptyStrategyRule: StrategyRuleForm = {
   portfolioId: "",
   assetId: "",
   metric: "PriceChangePercent",
+  priceMovement: "DropAtLeast",
   operator: "LessThanOrEqual",
-  value: "10",
+  value: "5",
+  upperValue: "10",
   periodAmount: "1",
   periodUnit: "Month",
   effectType: "RequireReview",
@@ -203,6 +216,26 @@ function priorityValueFromLevel(level: RulePriorityLevel) {
   return level === "High" ? 10 : level === "Low" ? 200 : 100;
 }
 
+function priceMovementFromCondition(operator: RuleComparisonOperator, value: number | null | undefined, upperValue: number | null | undefined): RulePriceMovement {
+  if (operator === "BetweenInclusive" && (upperValue ?? 0) <= 0) {
+    return "DropBetween";
+  }
+
+  if (operator === "BetweenInclusive") {
+    return "RiseBetween";
+  }
+
+  if (operator === "GreaterThanOrEqual" && (value ?? 0) >= 0) {
+    return "RiseAtLeast";
+  }
+
+  return "DropAtLeast";
+}
+
+function conditionDisplayValue(value: number | null | undefined) {
+  return value == null ? "" : toNumberInput(Math.abs(value * 100));
+}
+
 function hydrateStrategyRuleForm(rule: StrategyRule): StrategyRuleForm {
   const definition = rule.definition;
   const targetScope = definition?.target.mode === "Specific"
@@ -220,8 +253,13 @@ function hydrateStrategyRuleForm(rule: StrategyRule): StrategyRuleForm {
     portfolioId: definition?.target.portfolioId ?? rule.portfolioId ?? "",
     assetId: definition?.target.assetId ?? rule.assetId ?? "",
     metric: definition?.condition.metric ?? "PriceChangePercent",
+    priceMovement: priceMovementFromCondition(
+      definition?.condition.operator ?? "LessThanOrEqual",
+      definition?.condition.value,
+      definition?.condition.upperValue),
     operator: definition?.condition.operator ?? "LessThanOrEqual",
-    value: definition?.condition.value == null ? "" : toNumberInput(definition.condition.value * 100),
+    value: conditionDisplayValue(definition?.condition.value),
+    upperValue: conditionDisplayValue(definition?.condition.upperValue),
     periodAmount: definition?.condition.period ? toNumberInput(definition.condition.period.amount) : "1",
     periodUnit: definition?.condition.period?.unit ?? "Month",
     effectType: definition?.effect.type ?? "RequireReview",
@@ -232,9 +270,9 @@ function hydrateStrategyRuleForm(rule: StrategyRule): StrategyRuleForm {
 }
 
 function buildRuleDefinition(form: StrategyRuleForm): RuleDefinition {
-  const isAlways = form.metric === "Always";
   const targetPortfolioId = form.targetScope === "PortfolioAssets" ? form.portfolioId || null : null;
   const targetAssetId = form.targetScope === "SpecificAsset" ? form.assetId || null : null;
+  const condition = buildRuleCondition(form);
 
   return {
     version: 1,
@@ -244,15 +282,7 @@ function buildRuleDefinition(form: StrategyRuleForm): RuleDefinition {
       portfolioId: targetPortfolioId,
       assetId: targetAssetId
     },
-    condition: {
-      metric: form.metric,
-      operator: form.operator,
-      value: isAlways ? null : parseDecimalInput(form.value) / 100,
-      unit: isAlways ? "None" : "Percent",
-      period: form.metric === "PriceChangePercent"
-        ? { amount: Math.max(1, Math.trunc(parseDecimalInput(form.periodAmount, 1))), unit: form.periodUnit }
-        : null
-    },
+    condition,
     effect: {
       type: form.effectType,
       strength: form.effectStrength,
@@ -262,17 +292,85 @@ function buildRuleDefinition(form: StrategyRuleForm): RuleDefinition {
   };
 }
 
+function buildRuleCondition(form: StrategyRuleForm): RuleDefinition["condition"] {
+  if (form.metric === "Always") {
+    return {
+      metric: form.metric,
+      operator: form.operator,
+      value: null,
+      upperValue: null,
+      unit: "None",
+      period: null
+    };
+  }
+
+  if (form.metric === "PriceChangePercent") {
+    const lowerInput = Math.abs(parseDecimalInput(form.value)) / 100;
+    const upperInput = Math.abs(parseDecimalInput(form.upperValue)) / 100;
+    const lowerThreshold = Math.min(lowerInput, upperInput);
+    const upperThreshold = Math.max(lowerInput, upperInput);
+
+    if (form.priceMovement === "DropBetween") {
+      return {
+        metric: form.metric,
+        operator: "BetweenInclusive",
+        value: -upperThreshold,
+        upperValue: -lowerThreshold,
+        unit: "Percent",
+        period: { amount: Math.max(1, Math.trunc(parseDecimalInput(form.periodAmount, 1))), unit: form.periodUnit }
+      };
+    }
+
+    if (form.priceMovement === "RiseBetween") {
+      return {
+        metric: form.metric,
+        operator: "BetweenInclusive",
+        value: lowerThreshold,
+        upperValue: upperThreshold,
+        unit: "Percent",
+        period: { amount: Math.max(1, Math.trunc(parseDecimalInput(form.periodAmount, 1))), unit: form.periodUnit }
+      };
+    }
+
+    const threshold = lowerInput;
+    return {
+      metric: form.metric,
+      operator: form.priceMovement === "DropAtLeast" ? "LessThanOrEqual" : "GreaterThanOrEqual",
+      value: form.priceMovement === "DropAtLeast" ? -threshold : threshold,
+      upperValue: null,
+      unit: "Percent",
+      period: { amount: Math.max(1, Math.trunc(parseDecimalInput(form.periodAmount, 1))), unit: form.periodUnit }
+    };
+  }
+
+  return {
+    metric: form.metric,
+    operator: form.operator,
+    value: parseDecimalInput(form.value) / 100,
+    upperValue: form.operator === "BetweenInclusive" ? parseDecimalInput(form.upperValue) / 100 : null,
+    unit: "Percent",
+    period: null
+  };
+}
+
 function describeRuleCondition(form: StrategyRuleForm) {
   if (form.metric === "Always") {
     return "Toujours active";
   }
 
+  if (form.metric === "PriceChangePercent") {
+    if (form.priceMovement === "DropBetween" || form.priceMovement === "RiseBetween") {
+      const movement = form.priceMovement === "DropBetween" ? "baisse entre" : "hausse entre";
+      return `${movement} ${Math.abs(parseDecimalInput(form.value))} % et ${Math.abs(parseDecimalInput(form.upperValue))} % sur ${parseDecimalInput(form.periodAmount, 1)} ${labelFor(ruleTimeUnitOptions, form.periodUnit)}`;
+    }
+
+    const movement = form.priceMovement === "DropAtLeast" ? "baisse d'au moins" : "hausse d'au moins";
+    return `${movement} ${Math.abs(parseDecimalInput(form.value))} % sur ${parseDecimalInput(form.periodAmount, 1)} ${labelFor(ruleTimeUnitOptions, form.periodUnit)}`;
+  }
+
   const metric = labelFor(ruleMetricOptions, form.metric).toLowerCase();
   const operator = labelFor(ruleOperatorOptions, form.operator).toLowerCase();
-  const period = form.metric === "PriceChangePercent"
-    ? ` sur ${parseDecimalInput(form.periodAmount, 1)} ${labelFor(ruleTimeUnitOptions, form.periodUnit)}`
-    : "";
-  return `${metric} ${operator} ${parseDecimalInput(form.value)} %${period}`;
+  return `${metric} ${operator} ${parseDecimalInput(form.value)} %`;
 }
 
 function describeRuleTarget(form: StrategyRuleForm, portfolioById: Map<string, Portfolio>, assetById: Map<string, Asset>) {
@@ -317,6 +415,14 @@ function isStrategyRuleFormInvalid(form: StrategyRuleForm) {
   }
 
   if (form.metric !== "Always" && form.value.trim() === "") {
+    return true;
+  }
+
+  const requiresUpperValue = form.metric === "PriceChangePercent"
+    ? form.priceMovement === "DropBetween" || form.priceMovement === "RiseBetween"
+    : form.operator === "BetweenInclusive";
+  if (requiresUpperValue
+    && form.upperValue.trim() === "") {
     return true;
   }
 
@@ -860,16 +966,37 @@ export function StrategyPage() {
                   </label>
                   {strategyRuleForm.metric !== "Always" ? (
                     <>
+                      {strategyRuleForm.metric === "PriceChangePercent" ? (
+                        <label>
+                          Mouvement
+                          <select value={strategyRuleForm.priceMovement} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, priceMovement: event.target.value as RulePriceMovement })}>
+                            {rulePriceMovementOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
+                          </select>
+                        </label>
+                      ) : (
+                        <label>
+                          Operateur
+                          <select value={strategyRuleForm.operator} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, operator: event.target.value as RuleComparisonOperator })}>
+                            {ruleOperatorOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
+                          </select>
+                        </label>
+                      )}
                       <label>
-                        Operateur
-                        <select value={strategyRuleForm.operator} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, operator: event.target.value as RuleComparisonOperator })}>
-                          {ruleOperatorOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
-                        </select>
-                      </label>
-                      <label>
-                        Seuil en %
+                        {strategyRuleForm.metric === "PriceChangePercent" && (strategyRuleForm.priceMovement === "DropBetween" || strategyRuleForm.priceMovement === "RiseBetween") ? "De %" : "Seuil en %"}
                         <DecimalInput value={strategyRuleForm.value} onChange={(value) => setStrategyRuleForm({ ...strategyRuleForm, value })} />
                       </label>
+                      {strategyRuleForm.metric === "PriceChangePercent" && (strategyRuleForm.priceMovement === "DropBetween" || strategyRuleForm.priceMovement === "RiseBetween") ? (
+                        <label>
+                          A %
+                          <DecimalInput value={strategyRuleForm.upperValue} onChange={(value) => setStrategyRuleForm({ ...strategyRuleForm, upperValue: value })} />
+                        </label>
+                      ) : null}
+                      {strategyRuleForm.metric !== "PriceChangePercent" && strategyRuleForm.operator === "BetweenInclusive" ? (
+                        <label>
+                          A %
+                          <DecimalInput value={strategyRuleForm.upperValue} onChange={(value) => setStrategyRuleForm({ ...strategyRuleForm, upperValue: value })} />
+                        </label>
+                      ) : null}
                     </>
                   ) : null}
                   {strategyRuleForm.metric === "PriceChangePercent" ? (
@@ -921,7 +1048,6 @@ export function StrategyPage() {
                   <select value={strategyRuleForm.priorityLevel} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, priorityLevel: event.target.value as RulePriorityLevel })}>
                     {rulePriorityOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
                   </select>
-                  <small>{rulePriorityOptions.find((option) => option.value === strategyRuleForm.priorityLevel)?.detail}</small>
                 </label>
                 <label className="checkboxLabel"><input type="checkbox" checked={strategyRuleForm.isActive} onChange={(event) => setStrategyRuleForm({ ...strategyRuleForm, isActive: event.target.checked })} /> Regle active</label>
                 <div className="formActions">

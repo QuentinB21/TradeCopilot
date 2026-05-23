@@ -134,18 +134,48 @@ public sealed class RuleEvaluationService
             return new RuleConditionEvaluation(false, measuredValue, "Donnees insuffisantes pour evaluer la regle.");
         }
 
-        var triggered = condition.Operator switch
-        {
-            RuleComparisonOperator.LessThanOrEqual => measuredValue.Value <= condition.Value.Value,
-            RuleComparisonOperator.GreaterThanOrEqual => measuredValue.Value >= condition.Value.Value,
-            RuleComparisonOperator.Equal => measuredValue.Value == condition.Value.Value,
-            _ => false
-        };
+        var triggered = IsConditionTriggered(measuredValue.Value, condition);
 
         return new RuleConditionEvaluation(
             triggered,
             measuredValue,
-            $"{FormatMetric(condition.Metric)} mesure a {FormatPercent(measuredValue.Value)} pour un seuil de {FormatPercent(condition.Value.Value)}.");
+            $"{FormatMetric(condition.Metric)} mesure a {FormatPercent(measuredValue.Value)} pour {FormatThreshold(condition)}.");
+    }
+
+    private static bool IsConditionTriggered(decimal measuredValue, RuleConditionDto condition)
+    {
+        if (condition.Value is null)
+        {
+            return false;
+        }
+
+        return condition.Operator switch
+        {
+            RuleComparisonOperator.LessThanOrEqual => measuredValue <= condition.Value.Value,
+            RuleComparisonOperator.GreaterThanOrEqual => measuredValue >= condition.Value.Value,
+            RuleComparisonOperator.Equal => measuredValue == condition.Value.Value,
+            RuleComparisonOperator.BetweenInclusive when condition.UpperValue is not null =>
+                measuredValue >= Math.Min(condition.Value.Value, condition.UpperValue.Value)
+                && measuredValue <= Math.Max(condition.Value.Value, condition.UpperValue.Value),
+            _ => false
+        };
+    }
+
+    private static string FormatThreshold(RuleConditionDto condition)
+    {
+        if (condition.Value is null)
+        {
+            return "un seuil non renseigne";
+        }
+
+        if (condition.Operator == RuleComparisonOperator.BetweenInclusive && condition.UpperValue is not null)
+        {
+            var lower = Math.Min(condition.Value.Value, condition.UpperValue.Value);
+            var upper = Math.Max(condition.Value.Value, condition.UpperValue.Value);
+            return $"une plage entre {FormatPercent(lower)} et {FormatPercent(upper)}";
+        }
+
+        return $"un seuil de {FormatPercent(condition.Value.Value)}";
     }
 
     private static decimal? GetPriceChange(Guid assetId, RulePeriodDto? period, IReadOnlyList<AssetPrice> prices)
