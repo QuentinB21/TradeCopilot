@@ -105,29 +105,14 @@ h2 {
   border: 1px solid var(--ink);
   border-radius: 8px;
   background: var(--ink);
+  overflow: hidden;
 }
 
-.brandMark span {
-  position: relative;
-  width: 18px;
-  height: 18px;
-  border: 2px solid var(--paper);
-  border-radius: 999px;
-}
-
-.brandMark span::before,
-.brandMark span::after {
-  position: absolute;
-  content: "";
-  background: var(--paper);
-}
-
-.brandMark span::before {
-  inset: 2px 7px;
-}
-
-.brandMark span::after {
-  inset: 7px 2px;
+.brandMark img {
+  width: 30px;
+  height: 30px;
+  display: block;
+  object-fit: contain;
 }
 
 .brand strong,

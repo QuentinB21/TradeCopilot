@@ -20,7 +20,7 @@ export function AppShell<TKey extends string>({ activeView, navigation, children
       <aside className="sidebar">
         <div className="brand">
           <div className="brandMark" aria-hidden="true">
-            <span />
+            <img src="/icons/app-icon-white.png" alt="" />
           </div>
           <div>
             <strong>TradeCopilot</strong>
