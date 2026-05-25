@@ -10,6 +10,7 @@ import { PageHeader } from "../components/PageHeader";
 import { Panel } from "../components/Panel";
 import { Pagination } from "../components/Pagination";
 import { QueryState } from "../components/QueryState";
+import { useBodyScrollLock } from "../hooks/useBodyScrollLock";
 import { usePagination } from "../hooks/usePagination";
 
 const emptyAsset: CreateAssetPayload = {
@@ -253,6 +254,8 @@ function AssetDrawerShell({
   subtitle: string;
   title: string;
 }) {
+  useBodyScrollLock(true);
+
   return (
     <div className="assetDrawerLayer" role="presentation">
       <button aria-label="Fermer le panneau" className="assetDrawerBackdrop" onClick={onClose} type="button" />

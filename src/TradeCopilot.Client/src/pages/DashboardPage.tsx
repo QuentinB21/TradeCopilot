@@ -8,6 +8,7 @@ import { MarketBindingPanel } from "../components/MarketBindingPanel";
 import { PageHeader } from "../components/PageHeader";
 import { Panel } from "../components/Panel";
 import { QueryState } from "../components/QueryState";
+import { useBodyScrollLock } from "../hooks/useBodyScrollLock";
 import { readDashboardRefreshInterval } from "../lib/appSettings";
 import { formatCurrencyCompact, formatPercent } from "../lib/format";
 import { formatStrategicStatus } from "../domain/options";
@@ -640,6 +641,8 @@ function AllocationSummary({ portfolios, positions, onOpenDetails }: { portfolio
 }
 
 function DashboardDrawer({ children, onClose, subtitle, title }: { children: ReactNode; onClose: () => void; subtitle: string; title: string }) {
+  useBodyScrollLock(true);
+
   return (
     <aside className="dashboardDrawerLayer" role="dialog" aria-modal="true" aria-label={title}>
       <button className="dashboardDrawerBackdrop" onClick={onClose} type="button" aria-label="Fermer" />
