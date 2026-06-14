@@ -18,11 +18,16 @@ services:
     depends_on:
       - api
       - client
+      - keycloak
 
   client:
     build:
       context: .
       dockerfile: src/TradeCopilot.Client/Dockerfile
+      args:
+        VITE_AUTH_AUTHORITY: ${VITE_AUTH_AUTHORITY:-http://localhost/auth/realms/tradecopilot}
+        VITE_AUTH_CLIENT_ID: ${VITE_AUTH_CLIENT_ID:-tradecopilot-client}
+        VITE_AUTH_SCOPE: ${VITE_AUTH_SCOPE:-openid profile email}
     container_name: tradecopilot-client
     networks:
       - tradecopilot
@@ -41,17 +46,67 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__TradeCopilot: Host=postgres;Port=5432;Database=tradecopilot;Username=tradecopilot;Password=tradecopilot_dev_password
+      Authentication__Authority: ${AUTH_AUTHORITY:-http://localhost/auth/realms/tradecopilot}
+      Authentication__MetadataAddress: ${AUTH_METADATA_ADDRESS:-http://keycloak:8080/auth/realms/tradecopilot/.well-known/openid-configuration}
+      Authentication__BackchannelAuthority: ${AUTH_BACKCHANNEL_AUTHORITY:-http://keycloak:8080/auth/realms/tradecopilot}
+      Authentication__Audience: ${AUTH_AUDIENCE:-tradecopilot-api}
+      Authentication__RequireHttpsMetadata: ${AUTH_REQUIRE_HTTPS_METADATA:-false}
     networks:
       - tradecopilot
     depends_on:
       postgres:
         condition: service_healthy
+      keycloak:
+        condition: service_started
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/api/dashboard >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health >/dev/null || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 20s
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: tradecopilot-keycloak
+    command:
+      - start-dev
+      - --http-port=8080
+      - --http-relative-path=/auth
+      - --hostname=${KEYCLOAK_HOSTNAME:-http://localhost/auth}
+      - --hostname-strict=false
+      - --proxy-headers=xforwarded
+      - --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD:-change-me-local}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak_dev_password}
+    volumes:
+      - ./infra/keycloak/tradecopilot-realm.json:/opt/keycloak/data/import/tradecopilot-realm.json:ro
+    networks:
+      - tradecopilot
+    depends_on:
+      keycloak-postgres:
+        condition: service_healthy
+
+  keycloak-postgres:
+    image: postgres:16-alpine
+    container_name: tradecopilot-keycloak-postgres
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak_dev_password}
+    volumes:
+      - tradecopilot-keycloak-postgres:/var/lib/postgresql/data
+    networks:
+      - tradecopilot
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   postgres:
     image: postgres:16-alpine
@@ -104,6 +159,7 @@ services:
 volumes:
   tradecopilot-postgres:
   tradecopilot-pgadmin:
+  tradecopilot-keycloak-postgres:
 
 networks:
   tradecopilot:

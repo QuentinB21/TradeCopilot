@@ -43,6 +43,7 @@ Services inclus :
 - Client React/Nginx : route `http://localhost/`
 - API ASP.NET Core : route `http://localhost/api/*`
 - Swagger API : [http://localhost/swagger](http://localhost/swagger)
+- Keycloak : [http://localhost/auth](http://localhost/auth), console admin `admin` / `change-me-local` en developpement local
 - PostgreSQL : port local `5432`
 - pgAdmin : [http://localhost:5050](http://localhost:5050), connexion PostgreSQL TradeCopilot preconfiguree
 
@@ -131,3 +132,39 @@ Pour repartir d'une base locale vide :
 docker compose down -v
 docker compose up -d
 ```
+
+## Authentification Keycloak
+
+En Docker Compose, l'application est protegee par Keycloak. Le realm `tradecopilot` et le client public `tradecopilot-client` sont importes depuis `infra/keycloak/tradecopilot-realm.json`.
+
+Apres le premier demarrage :
+
+1. Ouvre `http://localhost/auth/admin`.
+2. Connecte-toi avec `KC_BOOTSTRAP_ADMIN_USERNAME` / `KC_BOOTSTRAP_ADMIN_PASSWORD`.
+3. Va dans le realm `tradecopilot`.
+4. Cree au moins un utilisateur applicatif, definis son mot de passe dans `Credentials`, puis desactive `Temporary` si necessaire.
+5. Reviens sur `http://localhost` et connecte-toi avec cet utilisateur.
+
+Pour un VPS, copie `.env.example` vers `.env`, remplace les mots de passe et remplace les URLs `localhost` par le domaine HTTPS public. Exemple :
+
+```env
+KEYCLOAK_HOSTNAME=https://tradecopilot.example.com/auth
+AUTH_AUTHORITY=https://tradecopilot.example.com/auth/realms/tradecopilot
+AUTH_METADATA_ADDRESS=http://keycloak:8080/auth/realms/tradecopilot/.well-known/openid-configuration
+AUTH_BACKCHANNEL_AUTHORITY=http://keycloak:8080/auth/realms/tradecopilot
+VITE_AUTH_AUTHORITY=https://tradecopilot.example.com/auth/realms/tradecopilot
+```
+
+Dans Keycloak, mets aussi a jour le client `tradecopilot-client` :
+
+- `Valid redirect URIs` : `https://ton-domaine/auth/callback`
+- `Valid post logout redirect URIs` : `https://ton-domaine`
+- `Web origins` : `https://ton-domaine`
+
+Le client React lit l'URL Keycloak au build Vite. Apres modification de `.env`, il faut donc reconstruire le client :
+
+```powershell
+docker compose up --build -d
+```
+
+En execution locale hors Docker, l'API ne force l'authentification que si `Authentication:Authority` est renseigne. Cela permet de continuer a utiliser `dotnet run` sans Keycloak pendant le developpement rapide.

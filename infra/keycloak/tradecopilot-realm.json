@@ -1,0 +1,50 @@
+{
+  "realm": "tradecopilot",
+  "enabled": true,
+  "displayName": "TradeCopilot",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": true,
+  "rememberMe": true,
+  "loginWithEmailAllowed": true,
+  "sslRequired": "external",
+  "clients": [
+    {
+      "clientId": "tradecopilot-client",
+      "name": "TradeCopilot Client",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "frontchannelLogout": true,
+      "redirectUris": [
+        "http://localhost/auth/callback",
+        "http://localhost:5173/auth/callback",
+        "https://tradecopilot.example.com/auth/callback"
+      ],
+      "webOrigins": [
+        "http://localhost",
+        "http://localhost:5173",
+        "https://tradecopilot.example.com"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost##http://localhost:5173##https://tradecopilot.example.com"
+      },
+      "protocolMappers": [
+        {
+          "name": "tradecopilot-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "tradecopilot-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ]
+}

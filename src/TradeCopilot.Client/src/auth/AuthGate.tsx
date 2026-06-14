@@ -1,0 +1,35 @@
+import type { ReactNode } from "react";
+import { useAuth } from "./AuthProvider";
+
+export function AuthGate({ children }: { children: ReactNode }) {
+  const auth = useAuth();
+
+  if (auth.isLoading) {
+    return (
+      <main className="authShell">
+        <section className="authPanel">
+          <strong>TradeCopilot</strong>
+          <span>Verification de la session...</span>
+        </section>
+      </main>
+    );
+  }
+
+  if (!auth.isAuthenticated) {
+    return (
+      <main className="authShell">
+        <section className="authPanel">
+          <div className="brandMark authBrandMark" aria-hidden="true">
+            <img src="/icons/app-icon-white.png" alt="" />
+          </div>
+          <strong>TradeCopilot</strong>
+          <span>Connectez-vous pour acceder a vos donnees patrimoniales.</span>
+          {auth.error ? <p className="stateError">{auth.error}</p> : null}
+          <button type="button" onClick={() => void auth.signIn()}>Se connecter</button>
+        </section>
+      </main>
+    );
+  }
+
+  return children;
+}

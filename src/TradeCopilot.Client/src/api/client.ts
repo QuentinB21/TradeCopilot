@@ -1,15 +1,23 @@
+import { notifyUnauthorized, readAccessToken } from "../auth/tokenStore";
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = await readAccessToken();
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...init?.headers
     }
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      notifyUnauthorized();
+    }
+
     const message = await response.text();
     throw new Error(message || `API ${path} returned ${response.status}`);
   }
@@ -33,12 +41,20 @@ export function postJson<T>(path: string, body: unknown) {
 }
 
 export async function postForm<T>(path: string, body: FormData): Promise<T> {
+  const token = await readAccessToken();
   const response = await fetch(`${API_BASE}${path}`, {
     method: "POST",
-    body
+    body,
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    }
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      notifyUnauthorized();
+    }
+
     const message = await response.text();
     throw new Error(message || `API ${path} returned ${response.status}`);
   }

@@ -1,5 +1,6 @@
 import { BarChart3, BrainCircuit, BriefcaseBusiness, LineChart, ReceiptText, Settings2, ShieldCheck } from "lucide-react";
 import { lazy, Suspense, useState } from "react";
+import { useAuth } from "./auth/AuthProvider";
 import { AppShell, type NavigationItem } from "./components/AppShell";
 
 type ViewKey = "dashboard" | "portfolios" | "assets" | "transactions" | "assistant" | "strategy" | "settings";
@@ -24,9 +25,17 @@ const navigation: NavigationItem<ViewKey>[] = [
 
 export function App() {
   const [activeView, setActiveView] = useState<ViewKey>("dashboard");
+  const auth = useAuth();
+  const userName = auth.user?.profile.name ?? auth.user?.profile.preferred_username ?? auth.user?.profile.email ?? null;
 
   return (
-    <AppShell activeView={activeView} navigation={navigation} onNavigate={setActiveView}>
+    <AppShell
+      activeView={activeView}
+      navigation={navigation}
+      userName={userName}
+      onNavigate={setActiveView}
+      onSignOut={auth.user ? () => void auth.signOut() : undefined}
+    >
       <Suspense fallback={<section className="stateBlock">Chargement de la vue...</section>}>
         {activeView === "dashboard" ? <DashboardPage /> : null}
         {activeView === "portfolios" ? <PortfoliosPage /> : null}

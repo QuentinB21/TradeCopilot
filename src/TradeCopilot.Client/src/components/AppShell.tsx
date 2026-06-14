@@ -11,10 +11,12 @@ type AppShellProps<TKey extends string> = {
   activeView: TKey;
   navigation: NavigationItem<TKey>[];
   children: ReactNode;
+  userName?: string | null;
   onNavigate: (view: TKey) => void;
+  onSignOut?: () => void;
 };
 
-export function AppShell<TKey extends string>({ activeView, navigation, children, onNavigate }: AppShellProps<TKey>) {
+export function AppShell<TKey extends string>({ activeView, navigation, children, userName, onNavigate, onSignOut }: AppShellProps<TKey>) {
   return (
     <main className="app">
       <aside className="sidebar">
@@ -47,12 +49,12 @@ export function AppShell<TKey extends string>({ activeView, navigation, children
             );
           })}
         </nav>
-        <section className="sidebarGuide" aria-label="Flux de demarrage">
-          <span>Ordre conseille</span>
-          <strong>Configurer</strong>
-          <strong>Importer</strong>
-          <strong>Piloter</strong>
-        </section>
+        {onSignOut ? (
+          <section className="sidebarAccount" aria-label="Compte utilisateur">
+            <span>{userName ?? "Session active"}</span>
+            <button className="secondaryButton" type="button" onClick={onSignOut}>Deconnexion</button>
+          </section>
+        ) : null}
       </aside>
       <section className="workspace">{children}</section>
     </main>
