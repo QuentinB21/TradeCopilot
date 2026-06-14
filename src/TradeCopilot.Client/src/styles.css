@@ -263,6 +263,15 @@ th,
   padding: 24px;
 }
 
+.authSpinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--soft);
+  border-top-color: var(--ink);
+  border-radius: 999px;
+  animation: authSpin 850ms linear infinite;
+}
+
 .authPanel strong {
   font-size: 22px;
   line-height: 1.1;
@@ -286,6 +295,12 @@ th,
 .authBrandMark {
   width: 46px;
   height: 46px;
+}
+
+@keyframes authSpin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .workspace {

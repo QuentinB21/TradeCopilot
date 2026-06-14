@@ -1,0 +1,345 @@
+:root {
+  --tc-paper: #ffffff;
+  --tc-ink: #0a0a0a;
+  --tc-muted: #62625f;
+  --tc-bg: #f4f4f2;
+  --tc-surface: #fafaf9;
+  --tc-soft: #ecece8;
+  --tc-line: #d8d8d2;
+  --tc-line-strong: #b8b8b0;
+  --tc-focus: #0a0a0a;
+  --tc-danger: #c22a2a;
+  --tc-shadow: 0 16px 42px rgba(10, 10, 10, 0.08);
+}
+
+html,
+body {
+  width: 100%;
+  min-height: 100%;
+  background: var(--tc-bg) !important;
+  color: var(--tc-ink);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: 0;
+}
+
+.pf-v5-c-login {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: var(--tc-bg) !important;
+}
+
+.pf-v5-c-login::before {
+  content: none;
+}
+
+.pf-v5-c-login__container {
+  width: min(100% - 32px, 430px);
+  min-height: 0;
+  display: grid;
+  align-content: center;
+  justify-items: stretch;
+  padding: 124px 0 44px;
+}
+
+.pf-v5-c-login__main {
+  border: 1px solid var(--tc-line);
+  border-radius: 8px;
+  background: var(--tc-paper);
+  box-shadow: var(--tc-shadow);
+  overflow: hidden;
+}
+
+.pf-v5-c-login__main-header {
+  display: block;
+  border-bottom: 1px solid var(--tc-line);
+  padding: 22px 24px 18px;
+}
+
+.pf-v5-c-login__main-header::before {
+  content: none;
+}
+
+.pf-v5-c-login__main-header::after {
+  content: "Acces securise a vos donnees patrimoniales.";
+  display: block;
+  color: var(--tc-muted);
+  margin-top: 12px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.pf-v5-c-login__main-header .pf-v5-c-brand,
+.pf-v5-c-login__main-header .kc-logo-text,
+.pf-v5-c-login__main-header .kc-logo-text span {
+  display: none !important;
+}
+
+.pf-v5-c-login__main-title {
+  display: block !important;
+  max-width: 360px;
+  margin: 0 !important;
+  color: var(--tc-ink) !important;
+  font-size: 24px !important;
+  font-weight: 800 !important;
+  line-height: 1.14 !important;
+}
+
+.pf-v5-c-login__main-body {
+  padding: 22px 24px 24px;
+}
+
+.pf-v5-c-form {
+  display: grid;
+  gap: 14px;
+}
+
+.pf-v5-c-form__group {
+  display: grid;
+  gap: 7px;
+}
+
+.pf-v5-c-form__label,
+.pf-v5-c-form__label-text,
+.pf-v5-c-check__label {
+  color: var(--tc-muted) !important;
+  font-size: 13px !important;
+  font-weight: 650 !important;
+  line-height: 1.35;
+}
+
+.pf-v5-c-form-control,
+.pf-v5-c-input-group {
+  min-height: 44px;
+  border: 1px solid var(--tc-line-strong) !important;
+  border-radius: 8px !important;
+  background: var(--tc-paper) !important;
+  color: var(--tc-ink) !important;
+  box-shadow: none !important;
+}
+
+.pf-v5-c-form-control {
+  overflow: hidden;
+}
+
+.pf-v5-c-input-group {
+  overflow: hidden;
+}
+
+.pf-v5-c-input-group__item,
+.pf-v5-c-input-group__item.pf-m-fill {
+  display: flex;
+  min-height: 44px;
+}
+
+.pf-v5-c-input-group__item.pf-m-fill {
+  flex: 1 1 auto;
+}
+
+.pf-v5-c-input-group .pf-v5-c-form-control {
+  min-height: 42px;
+  border: 0 !important;
+  border-radius: 8px 0 0 8px !important;
+  overflow: hidden;
+}
+
+.pf-v5-c-form-control::before,
+.pf-v5-c-form-control::after,
+.pf-v5-c-input-group::before,
+.pf-v5-c-input-group::after {
+  display: none !important;
+  content: none !important;
+}
+
+.pf-v5-c-form-control,
+.pf-v5-c-form-control.pf-m-expanded,
+.pf-v5-c-form-control.pf-m-focused,
+.pf-v5-c-form-control.pf-m-readonly,
+.pf-v5-c-input-group.pf-m-focused {
+  --pf-v5-c-form-control--BorderColor: var(--tc-line-strong) !important;
+  --pf-v5-c-form-control--hover--BorderBottomColor: var(--tc-line-strong) !important;
+  --pf-v5-c-form-control--focus-within--BorderBottomColor: var(--tc-focus) !important;
+  --pf-v5-c-form-control--after--BorderBottomColor: transparent !important;
+  --pf-v5-c-form-control--after--Height: 0 !important;
+  --pf-v5-c-form-control--BackgroundColor: var(--tc-paper) !important;
+  --pf-v5-c-form-control__input--BackgroundColor: var(--tc-paper) !important;
+}
+
+.pf-v5-c-form-control input,
+.pf-v5-c-form-control textarea,
+.pf-v5-c-form-control select,
+.pf-v5-c-form-control > input {
+  width: 100%;
+  min-height: 42px;
+  border: 0 !important;
+  border-radius: 7px !important;
+  background: var(--tc-paper) !important;
+  color: var(--tc-ink) !important;
+  box-shadow: none !important;
+  outline: none !important;
+  appearance: none;
+}
+
+.pf-v5-c-input-group .pf-v5-c-form-control input {
+  border-radius: 7px 0 0 7px !important;
+}
+
+.pf-v5-c-form-control input::selection,
+.pf-v5-c-form-control textarea::selection {
+  background: #d8d8d2;
+  color: var(--tc-ink);
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--tc-paper) inset !important;
+  -webkit-text-fill-color: var(--tc-ink) !important;
+  caret-color: var(--tc-ink);
+  transition: background-color 99999s ease-in-out 0s;
+}
+
+.pf-v5-c-form-control:focus-within,
+.pf-v5-c-input-group:focus-within {
+  border-color: var(--tc-focus) !important;
+  box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.08) !important;
+}
+
+.pf-v5-c-button.pf-m-primary {
+  min-height: 44px;
+  border: 1px solid var(--tc-ink) !important;
+  border-radius: 8px !important;
+  background: var(--tc-ink) !important;
+  color: var(--tc-paper) !important;
+  font-weight: 750;
+}
+
+.pf-v5-c-button.pf-m-primary:hover,
+.pf-v5-c-button.pf-m-primary:focus {
+  background: #2a2a2a !important;
+}
+
+.pf-v5-c-button.pf-m-secondary,
+.pf-v5-c-button.pf-m-control {
+  border: 0 !important;
+  border-bottom: 0 !important;
+  border-left: 1px solid var(--tc-line) !important;
+  border-radius: 0 8px 8px 0 !important;
+  background: var(--tc-paper) !important;
+  color: var(--tc-ink) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.pf-v5-c-input-group .pf-v5-c-button.pf-m-control {
+  height: 44px;
+  min-width: 52px;
+}
+
+.pf-v5-c-input-group .pf-v5-c-button.pf-m-control::before,
+.pf-v5-c-input-group .pf-v5-c-button.pf-m-control::after {
+  display: none !important;
+  content: none !important;
+}
+
+.pf-v5-c-input-group .pf-v5-c-button.pf-m-control:hover,
+.pf-v5-c-input-group .pf-v5-c-button.pf-m-control:focus,
+.pf-v5-c-input-group .pf-v5-c-button.pf-m-control:focus-visible {
+  border-bottom: 0 !important;
+  background: var(--tc-soft) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.pf-v5-c-button.pf-m-link,
+a {
+  color: var(--tc-ink) !important;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.pf-v5-c-check {
+  align-items: center;
+}
+
+.pf-v5-c-check__input {
+  width: 16px !important;
+  height: 16px !important;
+  border: 1px solid var(--tc-line-strong) !important;
+  border-radius: 4px !important;
+  background: var(--tc-paper) !important;
+  accent-color: var(--tc-paper);
+  box-shadow: none !important;
+}
+
+.pf-v5-c-check__input:focus,
+.pf-v5-c-check__input:focus-visible {
+  outline: 2px solid rgba(10, 10, 10, 0.16);
+  outline-offset: 2px;
+}
+
+.pf-v5-c-check__input:checked {
+  border-color: var(--tc-ink) !important;
+  background: var(--tc-paper) !important;
+  accent-color: var(--tc-ink);
+}
+
+.pf-v5-c-alert {
+  border: 1px solid #f2b8b5 !important;
+  border-radius: 8px !important;
+  background: #fce4e4 !important;
+  color: var(--tc-danger) !important;
+  box-shadow: none !important;
+}
+
+.pf-v5-c-alert__title,
+.kc-feedback-text,
+.pf-v5-c-helper-text__item.pf-m-error,
+.pf-v5-c-helper-text__item-text.pf-m-error {
+  color: var(--tc-danger) !important;
+  font-weight: 650;
+}
+
+.pf-v5-c-login__main-footer {
+  border-top: 1px solid var(--tc-line);
+  background: var(--tc-surface);
+}
+
+.pf-v5-c-login__main-footer-band {
+  background: transparent !important;
+}
+
+#kc-form-options,
+#kc-form-buttons,
+#kc-info,
+#kc-reset-password-form,
+#kc-passwd-update-form,
+#kc-totp-settings-form {
+  display: grid;
+  gap: 12px;
+}
+
+#kc-form-buttons {
+  margin-top: 4px;
+}
+
+#kc-page-title {
+  color: var(--tc-ink);
+}
+
+@media (max-width: 560px) {
+  .pf-v5-c-login::before {
+    content: none;
+  }
+
+  .pf-v5-c-login__container {
+    width: min(100% - 24px, 420px);
+    padding: 88px 0 20px;
+  }
+
+  .pf-v5-c-login__main-header,
+  .pf-v5-c-login__main-body {
+    padding-inline: 18px;
+  }
+}

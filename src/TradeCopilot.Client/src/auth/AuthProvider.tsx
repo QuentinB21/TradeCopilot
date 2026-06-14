@@ -6,6 +6,7 @@ import { setAccessTokenProvider } from "./tokenStore";
 type AuthContextValue = {
   isAuthenticated: boolean;
   isLoading: boolean;
+  loadingReason: "callback" | "startup" | null;
   user: User | null;
   error: string | null;
   signIn: () => Promise<void>;
@@ -32,7 +33,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setLoading] = useState(isAuthEnabled);
+  const [isLoading, setLoading] = useState(isAuthEnabled && window.location.pathname === "/auth/callback");
+  const [loadingReason, setLoadingReason] = useState<AuthContextValue["loadingReason"]>(
+    isAuthEnabled && window.location.pathname === "/auth/callback" ? "callback" : null
+  );
   const [error, setError] = useState<string | null>(null);
 
   const readValidUser = useCallback(async () => {
@@ -45,17 +49,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return currentUser;
     }
 
-    try {
-      return await manager.signinSilent();
-    } catch {
-      return null;
-    }
+    return null;
   }, [manager]);
 
   useEffect(() => {
     if (!manager) {
       setAccessTokenProvider(null);
       setLoading(false);
+      setLoadingReason(null);
       return;
     }
     const authManager = manager;
@@ -77,6 +78,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async function initialize() {
       try {
         if (window.location.pathname === "/auth/callback") {
+          setLoading(true);
+          setLoadingReason("callback");
           try {
             const callbackUser = await authManager.signinRedirectCallback();
             setUser(callbackUser);
@@ -94,11 +97,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
+        setLoadingReason("startup");
         setUser(await readValidUser());
       } catch (exception) {
         setError(exception instanceof Error ? exception.message : "Authentification impossible.");
       } finally {
         setLoading(false);
+        setLoadingReason(null);
       }
     }
 
@@ -114,12 +119,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(async () => {
     if (manager) {
+      setError(null);
       await manager.signinRedirect();
     }
   }, [manager]);
 
   const signOut = useCallback(async () => {
     if (manager) {
+      setError(null);
+      setUser(null);
       await manager.signoutRedirect();
     }
   }, [manager]);
@@ -127,11 +135,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthContextValue>(() => ({
     isAuthenticated: !isAuthEnabled || Boolean(user && !user.expired),
     isLoading,
+    loadingReason,
     user,
     error,
     signIn,
     signOut
-  }), [error, isLoading, signIn, signOut, user]);
+  }), [error, isLoading, loadingReason, signIn, signOut, user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

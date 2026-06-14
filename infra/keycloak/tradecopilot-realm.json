@@ -2,6 +2,13 @@
   "realm": "tradecopilot",
   "enabled": true,
   "displayName": "TradeCopilot",
+  "loginTheme": "tradecopilot",
+  "internationalizationEnabled": true,
+  "defaultLocale": "fr",
+  "supportedLocales": [
+    "fr",
+    "en"
+  ],
   "registrationAllowed": false,
   "resetPasswordAllowed": true,
   "rememberMe": true,

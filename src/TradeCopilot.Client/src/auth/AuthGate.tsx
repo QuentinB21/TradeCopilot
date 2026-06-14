@@ -8,8 +8,13 @@ export function AuthGate({ children }: { children: ReactNode }) {
     return (
       <main className="authShell">
         <section className="authPanel">
+          <div className="authSpinner" aria-hidden="true" />
           <strong>TradeCopilot</strong>
-          <span>Verification de la session...</span>
+          <span>
+            {auth.loadingReason === "callback"
+              ? "Connexion validee, retour a l'application..."
+              : "Ouverture de la session..."}
+          </span>
         </section>
       </main>
     );
@@ -23,7 +28,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
             <img src="/icons/app-icon-white.png" alt="" />
           </div>
           <strong>TradeCopilot</strong>
-          <span>Connectez-vous pour acceder a vos donnees patrimoniales.</span>
+          <span>Acces securise a vos donnees patrimoniales.</span>
           {auth.error ? <p className="stateError">{auth.error}</p> : null}
           <button type="button" onClick={() => void auth.signIn()}>Se connecter</button>
         </section>
