@@ -1619,7 +1619,7 @@ th,
 .chartLiveValue {
   min-width: 0;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
   flex-wrap: wrap;
 }
@@ -1630,30 +1630,50 @@ th,
   letter-spacing: 0;
 }
 
-.chartGainToggle {
-  min-height: 30px;
-  border: 0;
+.chartIndicatorList {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chartPerformanceBadge {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--line);
   border-radius: 999px;
-  background: transparent;
-  padding: 0 2px;
-  color: var(--ink);
-  font-size: clamp(15px, 1.7vw, 18px);
-  font-weight: 800;
+  background: var(--surface);
+  padding: 5px 9px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
   letter-spacing: 0;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
-.chartGainToggle:hover,
-.chartGainToggle:focus-visible {
-  color: var(--focus);
-  outline: none;
+.chartPerformanceBadge strong {
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1;
 }
 
-.chartGainToggle.positive {
+.chartPerformanceBadge.positive strong {
   color: var(--positive);
 }
 
-.chartGainToggle.negative {
+.chartPerformanceBadge.negative strong {
   color: var(--danger);
+}
+
+.chartPerformanceBadge:hover,
+.chartPerformanceBadge:focus-visible {
+  border-color: var(--focus);
+  background: var(--paper);
+  outline: none;
 }
 
 .chartValueHeader .segmentedControl {

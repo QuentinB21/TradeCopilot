@@ -16,6 +16,7 @@ import type { Dashboard, DashboardHistoryPoint, PortfolioSummary, Position, Rule
 
 const chartColors = ["#0a0a0a", "#155eef", "#0b7a48", "#b86a00", "#c22a2a", "#525252", "#7c3aed", "#0f766e"];
 type DashboardPeriod = "1W" | "1M" | "1Y" | "MAX";
+type PerformanceDisplayMode = "percent" | "amount";
 type DashboardAlertItem = {
   id: string;
   title: string;
@@ -239,6 +240,38 @@ function SegmentedControl<T extends string>({
   );
 }
 
+function PerformanceIndicator({
+  amount,
+  displayMode,
+  label,
+  onToggle,
+  percent,
+  title
+}: {
+  amount: number | null;
+  displayMode: PerformanceDisplayMode;
+  label: string;
+  onToggle: () => void;
+  percent: number | null;
+  title: string;
+}) {
+  const displayedValue = displayMode === "percent" ? percent : amount;
+  const tone = displayedValue === null ? "neutral" : displayedValue >= 0 ? "positive" : "negative";
+  const nextUnit = displayMode === "percent" ? "euros" : "pourcentage";
+
+  return (
+    <button
+      className={`chartPerformanceBadge ${tone}`}
+      onClick={onToggle}
+      title={`${title} Cliquer pour afficher en ${nextUnit}.`}
+      type="button"
+    >
+      <span>{label}</span>
+      <strong>{displayMode === "percent" ? formatSignedPercent(percent) : formatSignedCurrency(amount)}</strong>
+    </button>
+  );
+}
+
 function TotalValueChart({
   history,
   onPeriodChange,
@@ -250,7 +283,8 @@ function TotalValueChart({
 }) {
   const [activePoint, setActivePoint] = useState<DashboardHistoryPoint | null>(null);
   const [cursorRatio, setCursorRatio] = useState(1);
-  const [gainDisplay, setGainDisplay] = useState<"percent" | "amount">("percent");
+  const [periodPerformanceDisplay, setPeriodPerformanceDisplay] = useState<PerformanceDisplayMode>("percent");
+  const [patrimonyPerformanceDisplay, setPatrimonyPerformanceDisplay] = useState<PerformanceDisplayMode>("percent");
   const chartRef = useRef<HTMLDivElement | null>(null);
   const points = filterHistoryByPeriod(normalizeHistory(history), period);
   useEffect(() => {
@@ -282,12 +316,21 @@ function TotalValueChart({
 
   const latestPoint = points.at(-1) ?? points[0];
   const displayedPoint = activePoint && points.some((point) => point.date === activePoint.date) ? activePoint : latestPoint;
-  const gainPercent = displayedPoint.totalInvested > 0 ? displayedPoint.totalUnrealizedGain / displayedPoint.totalInvested : 0;
-  const gainValue = gainDisplay === "percent"
-    ? formatPercent(gainPercent)
-    : formatCurrencyCompact(displayedPoint.totalUnrealizedGain);
-  const gainTone = displayedPoint.totalUnrealizedGain >= 0 ? "positive" : "negative";
-  const maxValue = Math.max(...points.flatMap((point) => [point.totalMarketValue, point.totalInvested]), 1);
+  const performanceBaselinePoint = findPerformanceBaselinePoint(points, displayedPoint) ?? displayedPoint;
+  const displayedRatio = getValueInvestedRatio(displayedPoint);
+  const baselineRatio = getValueInvestedRatio(performanceBaselinePoint);
+  const periodPerformance = displayedRatio !== null && baselineRatio !== null ? displayedRatio / baselineRatio - 1 : null;
+  const periodPerformanceAmount = baselineRatio !== null
+    ? displayedPoint.totalMarketValue - displayedPoint.totalInvested * baselineRatio
+    : null;
+  const patrimonyPerformance = displayedRatio !== null ? displayedRatio - 1 : null;
+  const patrimonyPerformanceAmount = displayedRatio !== null ? displayedPoint.totalMarketValue - displayedPoint.totalInvested : null;
+  const chartValues = points.flatMap((point) => [point.totalMarketValue, point.totalInvested]);
+  const rawMinValue = Math.min(...chartValues);
+  const rawMaxValue = Math.max(...chartValues);
+  const domainPadding = Math.max((rawMaxValue - rawMinValue) * 0.08, 1);
+  const minValue = Math.max(rawMinValue - domainPadding, 0);
+  const maxValue = rawMaxValue + domainPadding;
   const updateActivePointFromMouse = (clientX: number, bounds: DOMRect) => {
     const plotLeft = 92;
     const plotRight = 18;
@@ -303,15 +346,24 @@ function TotalValueChart({
       <div className="chartValueHeader">
         <div className="chartLiveValue">
           <strong>{formatCurrencyCompact(displayedPoint.totalMarketValue)}</strong>
-          <button
-            className={`chartGainToggle ${gainTone}`}
-            onClick={() => setGainDisplay(gainDisplay === "percent" ? "amount" : "percent")}
-            title="Basculer le gain latent entre pourcentage et euros"
-            type="button"
-          >
-            {displayedPoint.totalUnrealizedGain >= 0 ? "+" : ""}
-            {gainValue}
-          </button>
+          <div className="chartIndicatorList">
+            <PerformanceIndicator
+              amount={periodPerformanceAmount}
+              displayMode={periodPerformanceDisplay}
+              label="Perf. periode"
+              onToggle={() => setPeriodPerformanceDisplay(periodPerformanceDisplay === "percent" ? "amount" : "percent")}
+              percent={periodPerformance}
+              title="Performance periodique: (Valeur / Investi) comparee au debut de periode."
+            />
+            <PerformanceIndicator
+              amount={patrimonyPerformanceAmount}
+              displayMode={patrimonyPerformanceDisplay}
+              label="Perf. patrimoine"
+              onToggle={() => setPatrimonyPerformanceDisplay(patrimonyPerformanceDisplay === "percent" ? "amount" : "percent")}
+              percent={patrimonyPerformance}
+              title="Performance reelle du patrimoine: Valeur / Investi - 1."
+            />
+          </div>
         </div>
         <SegmentedControl options={dashboardPeriodOptions} value={period} onChange={onPeriodChange} ariaLabel="Periode du graphique" />
       </div>
@@ -334,7 +386,7 @@ function TotalValueChart({
             <XAxis dataKey="date" tickFormatter={formatShortDate} axisLine={false} tickLine={false} minTickGap={24} />
             <YAxis
               axisLine={false}
-              domain={[0, maxValue]}
+              domain={[minValue, maxValue]}
               tickFormatter={(value) => formatCurrencyCompact(Number(value))}
               tickLine={false}
               width={88}
@@ -481,6 +533,39 @@ function ObjectiveRow({ label, detail, actual, target, drift }: { label: string;
 
 function normalizeHistory(history: DashboardHistoryPoint[]) {
   return [...history].sort((left, right) => left.date.localeCompare(right.date));
+}
+
+function getValueInvestedRatio(point: DashboardHistoryPoint) {
+  if (point.totalInvested <= 0) {
+    return null;
+  }
+
+  return point.totalMarketValue / point.totalInvested;
+}
+
+function formatSignedPercent(value: number | null) {
+  if (value === null || !Number.isFinite(value)) {
+    return "-";
+  }
+
+  return `${value >= 0 ? "+" : ""}${formatPercent(value)}`;
+}
+
+function formatSignedCurrency(value: number | null) {
+  if (value === null || !Number.isFinite(value)) {
+    return "-";
+  }
+
+  return `${value >= 0 ? "+" : ""}${formatCurrencyCompact(value)}`;
+}
+
+function findPerformanceBaselinePoint(points: DashboardHistoryPoint[], displayedPoint: DashboardHistoryPoint) {
+  return points.find(
+    (point) =>
+      point.date <= displayedPoint.date &&
+      point.totalMarketValue > 0 &&
+      point.totalInvested > 0
+  );
 }
 
 function filterHistoryByPeriod(points: DashboardHistoryPoint[], period: DashboardPeriod) {
