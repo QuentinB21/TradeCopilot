@@ -108,11 +108,24 @@ docker compose --env-file .env.prod -f docker-compose.prod.yml logs -f keycloak
 
 Le realm importe le client `tradecopilot-client` avec :
 
+- `User registration` active pour permettre l'inscription publique ;
 - `Valid redirect URIs` : `https://quentin-bouchot.fr/projets/TradeCopilot/auth/callback`
 - `Web origins` : `https://quentin-bouchot.fr`
 - `Valid post logout redirect URIs` : `https://quentin-bouchot.fr/projets/TradeCopilot/`
 
-Si le realm existe deja, l'import ne remplace pas forcement la configuration. Dans ce cas, verifier ces valeurs dans l'admin Keycloak.
+Si le realm existe deja, l'import ne remplace pas forcement la configuration. Dans ce cas, verifier ces valeurs dans l'admin Keycloak et activer manuellement `Realm settings > Login > User registration`.
+
+## Isolation utilisateur
+
+L'inscription publique est viable uniquement parce que l'API isole maintenant les donnees par utilisateur connecte :
+
+- l'owner est le claim Keycloak `sub` ;
+- les tables metier portent un `OwnerUserId` ;
+- le repository filtre toutes les lectures sur l'utilisateur courant ;
+- les ecritures renseignent automatiquement `OwnerUserId` ;
+- une reference vers un portefeuille ou un actif d'un autre utilisateur est refusee.
+
+Sur un VPS neuf, aucune action de migration manuelle n'est necessaire : les tables sont creees directement avec `OwnerUserId`, puis chaque nouvelle donnee est rattachee au compte Keycloak connecte.
 
 ## CI/CD GitHub Actions
 

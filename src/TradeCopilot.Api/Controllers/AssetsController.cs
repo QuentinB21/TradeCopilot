@@ -54,8 +54,15 @@ public sealed class AssetsController(IAssetService assetService) : ControllerBas
     [HttpPut("{id:guid}/market-binding")]
     public async Task<ActionResult<AssetDto>> BindMarketInstrument(Guid id, BindMarketInstrumentRequest request, CancellationToken cancellationToken)
     {
-        var asset = await assetService.BindMarketInstrumentAsync(id, request, cancellationToken);
-        return asset is null ? NotFound() : Ok(asset);
+        try
+        {
+            var asset = await assetService.BindMarketInstrumentAsync(id, request, cancellationToken);
+            return asset is null ? NotFound() : Ok(asset);
+        }
+        catch (ArgumentException exception)
+        {
+            return BadRequest(exception.Message);
+        }
     }
 
     [HttpDelete("{id:guid}")]

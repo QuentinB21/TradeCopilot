@@ -5,6 +5,7 @@ namespace TradeCopilot.Domain;
 public sealed class Portfolio
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerUserId { get; set; } = string.Empty;
     public required string Name { get; set; }
     public PortfolioType Type { get; set; }
     public required string Broker { get; set; }

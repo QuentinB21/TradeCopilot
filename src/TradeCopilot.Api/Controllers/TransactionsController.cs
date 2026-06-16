@@ -25,15 +25,29 @@ public sealed class TransactionsController(ITransactionService transactionServic
     [HttpPost]
     public async Task<ActionResult<TransactionDto>> CreateTransaction(CreateTransactionRequest request, CancellationToken cancellationToken)
     {
-        var transaction = await transactionService.CreateTransactionAsync(request, cancellationToken);
-        return CreatedAtAction(nameof(GetTransaction), new { id = transaction.Id }, transaction);
+        try
+        {
+            var transaction = await transactionService.CreateTransactionAsync(request, cancellationToken);
+            return CreatedAtAction(nameof(GetTransaction), new { id = transaction.Id }, transaction);
+        }
+        catch (ArgumentException exception)
+        {
+            return BadRequest(exception.Message);
+        }
     }
 
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<TransactionDto>> UpdateTransaction(Guid id, UpdateTransactionRequest request, CancellationToken cancellationToken)
     {
-        var transaction = await transactionService.UpdateTransactionAsync(id, request, cancellationToken);
-        return transaction is null ? NotFound() : Ok(transaction);
+        try
+        {
+            var transaction = await transactionService.UpdateTransactionAsync(id, request, cancellationToken);
+            return transaction is null ? NotFound() : Ok(transaction);
+        }
+        catch (ArgumentException exception)
+        {
+            return BadRequest(exception.Message);
+        }
     }
 
     [HttpDelete("{id:guid}")]

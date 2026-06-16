@@ -25,15 +25,29 @@ public sealed class PricesController(IPriceService priceService) : ControllerBas
     [HttpPost]
     public async Task<ActionResult<AssetPriceDto>> CreatePrice(CreateAssetPriceRequest request, CancellationToken cancellationToken)
     {
-        var price = await priceService.CreatePriceAsync(request, cancellationToken);
-        return CreatedAtAction(nameof(GetPrice), new { id = price.Id }, price);
+        try
+        {
+            var price = await priceService.CreatePriceAsync(request, cancellationToken);
+            return CreatedAtAction(nameof(GetPrice), new { id = price.Id }, price);
+        }
+        catch (ArgumentException exception)
+        {
+            return BadRequest(exception.Message);
+        }
     }
 
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<AssetPriceDto>> UpdatePrice(Guid id, UpdateAssetPriceRequest request, CancellationToken cancellationToken)
     {
-        var price = await priceService.UpdatePriceAsync(id, request, cancellationToken);
-        return price is null ? NotFound() : Ok(price);
+        try
+        {
+            var price = await priceService.UpdatePriceAsync(id, request, cancellationToken);
+            return price is null ? NotFound() : Ok(price);
+        }
+        catch (ArgumentException exception)
+        {
+            return BadRequest(exception.Message);
+        }
     }
 
     [HttpDelete("{id:guid}")]

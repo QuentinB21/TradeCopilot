@@ -159,6 +159,8 @@ Le CI/CD GitHub Actions est defini dans `.github/workflows/deploy-production.yml
 
 En Docker Compose, l'application est protegee par Keycloak. Le realm `tradecopilot` et le client public `tradecopilot-client` sont importes depuis `infra/keycloak/tradecopilot-realm.json`.
 
+Le realm autorise l'inscription publique. Cote API, les donnees metier sont isolees par utilisateur via le claim Keycloak `sub` stocke dans `OwnerUserId`, afin qu'un utilisateur inscrit ne puisse ni lire ni modifier les portefeuilles, actifs, transactions, prix, repartitions ou regles d'un autre.
+
 Apres le premier demarrage :
 
 1. Ouvre `http://localhost/auth/admin`.
@@ -184,6 +186,8 @@ Dans Keycloak, mets aussi a jour le client `tradecopilot-client` :
 - `Valid redirect URIs` : `https://ton-domaine/projets/TradeCopilot/auth/callback`
 - `Valid post logout redirect URIs` : `https://ton-domaine/projets/TradeCopilot/`
 - `Web origins` : `https://ton-domaine`
+
+Si le realm existait deja avant cette version, active aussi `Realm settings > Login > User registration`.
 
 Le client React lit l'URL Keycloak au build Vite. Apres modification de `.env`, il faut donc reconstruire le client :
 

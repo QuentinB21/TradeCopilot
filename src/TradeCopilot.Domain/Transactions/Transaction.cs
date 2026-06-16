@@ -3,6 +3,7 @@ namespace TradeCopilot.Domain;
 public sealed class Transaction
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerUserId { get; set; } = string.Empty;
     public Guid PortfolioId { get; set; }
     public Portfolio? Portfolio { get; set; }
     public Guid? AssetId { get; set; }

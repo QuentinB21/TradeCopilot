@@ -1,6 +1,8 @@
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using TradeCopilot.Api.Security;
+using TradeCopilot.Application.Abstractions;
 using TradeCopilot.Application;
 using TradeCopilot.Infrastructure;
 
@@ -20,6 +22,8 @@ public static class ServiceCollectionExtensions
         {
             options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
         });
+        services.AddHttpContextAccessor();
+        services.AddScoped<ICurrentUserContext, HttpCurrentUserContext>();
         services.AddCors(options =>
         {
             options.AddPolicy("local-client", policy =>

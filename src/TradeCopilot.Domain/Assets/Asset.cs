@@ -3,6 +3,7 @@ namespace TradeCopilot.Domain;
 public sealed class Asset
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+    public string OwnerUserId { get; set; } = string.Empty;
     public required string Name { get; set; }
     public required string Symbol { get; set; }
     public string? Isin { get; set; }

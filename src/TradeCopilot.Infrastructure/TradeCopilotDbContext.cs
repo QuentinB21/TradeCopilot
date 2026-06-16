@@ -16,6 +16,8 @@ public sealed class TradeCopilotDbContext(DbContextOptions<TradeCopilotDbContext
     {
         modelBuilder.Entity<Portfolio>(entity =>
         {
+            entity.Property(portfolio => portfolio.OwnerUserId).HasMaxLength(128);
+            entity.HasIndex(portfolio => portfolio.OwnerUserId);
             entity.Property(portfolio => portfolio.Name).HasMaxLength(160);
             entity.Property(portfolio => portfolio.Broker).HasMaxLength(120);
             entity.Property(portfolio => portfolio.BaseCurrency).HasMaxLength(3);
@@ -24,7 +26,8 @@ public sealed class TradeCopilotDbContext(DbContextOptions<TradeCopilotDbContext
 
         modelBuilder.Entity<Asset>(entity =>
         {
-            entity.HasIndex(asset => asset.Symbol).IsUnique();
+            entity.Property(asset => asset.OwnerUserId).HasMaxLength(128);
+            entity.HasIndex(asset => new { asset.OwnerUserId, asset.Symbol }).IsUnique();
             entity.Property(asset => asset.Name).HasMaxLength(200);
             entity.Property(asset => asset.Symbol).HasMaxLength(32);
             entity.Property(asset => asset.Isin).HasMaxLength(12);
@@ -36,6 +39,8 @@ public sealed class TradeCopilotDbContext(DbContextOptions<TradeCopilotDbContext
 
         modelBuilder.Entity<Transaction>(entity =>
         {
+            entity.Property(transaction => transaction.OwnerUserId).HasMaxLength(128);
+            entity.HasIndex(transaction => transaction.OwnerUserId);
             entity.HasOne(transaction => transaction.Portfolio)
                 .WithMany(portfolio => portfolio.Transactions)
                 .HasForeignKey(transaction => transaction.PortfolioId)
@@ -53,19 +58,20 @@ public sealed class TradeCopilotDbContext(DbContextOptions<TradeCopilotDbContext
             entity.Property(transaction => transaction.Comment).HasMaxLength(800);
             entity.Property(transaction => transaction.ImportSource).HasMaxLength(80);
             entity.Property(transaction => transaction.ExternalId).HasMaxLength(160);
-            entity.HasIndex(transaction => new { transaction.ImportSource, transaction.ExternalId })
+            entity.HasIndex(transaction => new { transaction.OwnerUserId, transaction.ImportSource, transaction.ExternalId })
                 .IsUnique()
                 .HasFilter("\"ImportSource\" IS NOT NULL AND \"ExternalId\" IS NOT NULL");
         });
 
         modelBuilder.Entity<AssetPrice>(entity =>
         {
+            entity.Property(price => price.OwnerUserId).HasMaxLength(128);
             entity.HasOne(price => price.Asset)
                 .WithMany(asset => asset.Prices)
                 .HasForeignKey(price => price.AssetId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            entity.HasIndex(price => new { price.AssetId, price.Date }).IsUnique();
+            entity.HasIndex(price => new { price.OwnerUserId, price.AssetId, price.Date }).IsUnique();
             entity.Property(price => price.Open).HasPrecision(18, 6);
             entity.Property(price => price.High).HasPrecision(18, 6);
             entity.Property(price => price.Low).HasPrecision(18, 6);
@@ -77,6 +83,7 @@ public sealed class TradeCopilotDbContext(DbContextOptions<TradeCopilotDbContext
 
         modelBuilder.Entity<Repartition>(entity =>
         {
+            entity.Property(repartition => repartition.OwnerUserId).HasMaxLength(128);
             entity.HasOne(repartition => repartition.Portfolio)
                 .WithMany(portfolio => portfolio.Repartitions)
                 .HasForeignKey(repartition => repartition.PortfolioId)
@@ -87,10 +94,10 @@ public sealed class TradeCopilotDbContext(DbContextOptions<TradeCopilotDbContext
                 .HasForeignKey(repartition => repartition.AssetId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            entity.HasIndex(repartition => repartition.PortfolioId)
+            entity.HasIndex(repartition => new { repartition.OwnerUserId, repartition.PortfolioId })
                 .IsUnique()
                 .HasFilter("\"Kind\" = 0");
-            entity.HasIndex(repartition => new { repartition.PortfolioId, repartition.AssetId })
+            entity.HasIndex(repartition => new { repartition.OwnerUserId, repartition.PortfolioId, repartition.AssetId })
                 .IsUnique()
                 .HasFilter("\"AssetId\" IS NOT NULL");
             entity.Property(repartition => repartition.TargetWeight).HasPrecision(9, 6);
@@ -119,6 +126,8 @@ public sealed class TradeCopilotDbContext(DbContextOptions<TradeCopilotDbContext
 
         modelBuilder.Entity<StrategyRule>(entity =>
         {
+            entity.Property(rule => rule.OwnerUserId).HasMaxLength(128);
+            entity.HasIndex(rule => rule.OwnerUserId);
             entity.HasOne(rule => rule.Portfolio)
                 .WithMany()
                 .HasForeignKey(rule => rule.PortfolioId)
