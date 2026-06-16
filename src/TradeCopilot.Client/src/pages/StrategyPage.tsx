@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { tradeCopilotApi } from "../api/tradeCopilotApi";
 import { ActionIconButton } from "../components/ActionIconButton";
 import { DecimalInput } from "../components/DecimalInput";
@@ -20,6 +20,8 @@ import type {
   RuleSeverity,
   RuleTimeUnit,
   StrategyRule,
+  StrategyRuleImportResult,
+  StrategyRulesExport,
   UpdateRepartitionPayload
 } from "../domain/types";
 import { formatPercent } from "../lib/format";
@@ -429,8 +431,22 @@ function isStrategyRuleFormInvalid(form: StrategyRuleForm) {
   return form.metric === "PriceChangePercent" && parseDecimalInput(form.periodAmount, 0) <= 0;
 }
 
+function downloadStrategyRulesExport(exportFile: StrategyRulesExport) {
+  const date = new Date().toISOString().slice(0, 10);
+  const blob = new Blob([JSON.stringify(exportFile, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `tradecopilot-regles-strategie-${date}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 export function StrategyPage() {
   const queryClient = useQueryClient();
+  const strategyRuleImportInputRef = useRef<HTMLInputElement | null>(null);
   const portfoliosQuery = useQuery({ queryKey: ["portfolios"], queryFn: tradeCopilotApi.getPortfolios });
   const assetsQuery = useQuery({ queryKey: ["assets"], queryFn: tradeCopilotApi.getAssets });
   const repartitionsQuery = useQuery({ queryKey: ["repartitions"], queryFn: tradeCopilotApi.getRepartitions });
@@ -446,6 +462,8 @@ export function StrategyPage() {
   const [activeSection, setActiveSection] = useState<StrategySection>("overview");
   const [activeEditor, setActiveEditor] = useState<StrategyEditor>(null);
   const [allocationPortfolioId, setAllocationPortfolioId] = useState("");
+  const [strategyRuleImportResult, setStrategyRuleImportResult] = useState<StrategyRuleImportResult | null>(null);
+  const [strategyRuleImportError, setStrategyRuleImportError] = useState<string | null>(null);
 
   const portfolios = portfoliosQuery.data ?? [];
   const assets = assetsQuery.data ?? [];
@@ -700,6 +718,34 @@ export function StrategyPage() {
     }
   });
   const deleteStrategyRule = useMutation({ mutationFn: tradeCopilotApi.deleteStrategyRule, onSuccess: invalidateConfiguration });
+  const exportStrategyRules = useMutation({
+    mutationFn: tradeCopilotApi.exportStrategyRules,
+    onSuccess: downloadStrategyRulesExport
+  });
+  const importStrategyRules = useMutation({
+    mutationFn: tradeCopilotApi.importStrategyRules,
+    onSuccess: async (result) => {
+      setStrategyRuleImportResult(result);
+      setStrategyRuleImportError(null);
+      await invalidateConfiguration();
+    },
+    onError: (error) => {
+      setStrategyRuleImportResult(null);
+      setStrategyRuleImportError(errorText(error));
+    }
+  });
+
+  const importStrategyRulesFromFile = async (file: File) => {
+    try {
+      const importFile = JSON.parse(await file.text()) as StrategyRulesExport;
+      setStrategyRuleImportError(null);
+      setStrategyRuleImportResult(null);
+      importStrategyRules.mutate(importFile);
+    } catch {
+      setStrategyRuleImportResult(null);
+      setStrategyRuleImportError("Fichier JSON de regles illisible.");
+    }
+  };
 
   return (
     <>
@@ -920,8 +966,31 @@ export function StrategyPage() {
           className="strategyPanel strategySectionPanel"
           title="Regles"
           subtitle="Cadre de decision explicite et maintenable."
-          action={<button className="ghostButton" onClick={createStrategyRule} type="button">Ajouter</button>}
+          action={(
+            <div className="panelActionGroup">
+              <button className="ghostButton secondaryButton" disabled={exportStrategyRules.isPending} onClick={() => exportStrategyRules.mutate()} type="button">
+                {exportStrategyRules.isPending ? "Export..." : "Exporter"}
+              </button>
+              <button className="ghostButton secondaryButton" disabled={importStrategyRules.isPending} onClick={() => strategyRuleImportInputRef.current?.click()} type="button">
+                {importStrategyRules.isPending ? "Import..." : "Importer"}
+              </button>
+              <button className="ghostButton" onClick={createStrategyRule} type="button">Ajouter</button>
+            </div>
+          )}
         >
+          <input
+            ref={strategyRuleImportInputRef}
+            className="visuallyHidden"
+            type="file"
+            accept="application/json,.json"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.currentTarget.value = "";
+              if (file) {
+                void importStrategyRulesFromFile(file);
+              }
+            }}
+          />
           {activeEditor === "rule" ? (
             <section className="strategyEditor strategyRuleEditor">
               <h3>{editingStrategyRuleId ? "Modifier la regle" : "Nouvelle regle"}</h3>
@@ -1057,7 +1126,26 @@ export function StrategyPage() {
               </form>
             </section>
           ) : null}
-          {(saveStrategyRule.error || deleteStrategyRule.error) ? <p className="stateError">{errorText(saveStrategyRule.error ?? deleteStrategyRule.error)}</p> : null}
+          {(saveStrategyRule.error || deleteStrategyRule.error || exportStrategyRules.error) ? <p className="stateError">{errorText(saveStrategyRule.error ?? deleteStrategyRule.error ?? exportStrategyRules.error)}</p> : null}
+          {strategyRuleImportError ? <p className="stateError">{strategyRuleImportError}</p> : null}
+          {strategyRuleImportResult ? (
+            <section className="importSummary">
+              <strong>{strategyRuleImportResult.importedRules} regle(s) importee(s), {strategyRuleImportResult.skippedRules} ignoree(s).</strong>
+              <span>{strategyRuleImportResult.rowsRead} regle(s) lue(s) dans le fichier.</span>
+              {strategyRuleImportResult.warnings.length > 0 ? (
+                <details>
+                  <summary>Voir les regles ignorees</summary>
+                  <ul>
+                    {strategyRuleImportResult.warnings.map((warning) => (
+                      <li key={`${warning.rowNumber}-${warning.code}-${warning.ruleName}`}>
+                        Ligne {warning.rowNumber} - {warning.ruleName || "Regle sans nom"} : {warning.message}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              ) : null}
+            </section>
+          ) : null}
           <QueryState isLoading={strategyRulesQuery.isLoading} error={strategyRulesQuery.error}>
             <div className="compactList">
               {strategyRules.length === 0 ? <p className="emptyState">Aucune regle de decision configuree.</p> : null}

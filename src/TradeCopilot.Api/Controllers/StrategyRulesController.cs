@@ -15,6 +15,27 @@ public sealed class StrategyRulesController(IStrategyRuleService strategyRuleSer
         return Ok(rules);
     }
 
+    [HttpGet("export")]
+    public async Task<ActionResult<StrategyRulesExportDto>> ExportStrategyRules(CancellationToken cancellationToken)
+    {
+        var exportFile = await strategyRuleService.ExportStrategyRulesAsync(cancellationToken);
+        return Ok(exportFile);
+    }
+
+    [HttpPost("import")]
+    public async Task<ActionResult<StrategyRuleImportResultDto>> ImportStrategyRules(StrategyRulesExportDto importFile, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await strategyRuleService.ImportStrategyRulesAsync(importFile, cancellationToken);
+            return Ok(result);
+        }
+        catch (ArgumentException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+    }
+
     [HttpPost]
     public async Task<ActionResult<StrategyRuleDto>> CreateStrategyRule(CreateStrategyRuleRequest request, CancellationToken cancellationToken)
     {

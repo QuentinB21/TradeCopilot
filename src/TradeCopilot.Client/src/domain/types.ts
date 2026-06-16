@@ -184,6 +184,48 @@ export type StrategyRule = {
   isActive: boolean;
 };
 
+export type StrategyRulesExport = {
+  format: "tradecopilot.strategy-rules";
+  version: number;
+  exportedAt: string;
+  rules: PortableStrategyRule[];
+};
+
+export type PortableStrategyRule = {
+  name: string;
+  description: string;
+  triggerCondition: string | null;
+  recommendedAction: string;
+  definition: RuleDefinition | null;
+  priority: number;
+  isActive: boolean;
+  portfolio: {
+    name: string;
+    type: PortfolioType;
+    broker: string;
+    baseCurrency: string;
+  } | null;
+  asset: {
+    name: string;
+    symbol: string;
+    isin: string | null;
+    marketSymbol: string | null;
+    currency: string;
+  } | null;
+};
+
+export type StrategyRuleImportResult = {
+  rowsRead: number;
+  importedRules: number;
+  skippedRules: number;
+  warnings: {
+    rowNumber: number;
+    ruleName: string;
+    code: string;
+    message: string;
+  }[];
+};
+
 export type Strategy = {
   globalAllocation: { envelope: string; targetWeight: number }[];
   rules: StrategyRule[];

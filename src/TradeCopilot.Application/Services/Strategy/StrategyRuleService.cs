@@ -8,6 +8,8 @@ namespace TradeCopilot.Application.Services.Strategy;
 
 public sealed class StrategyRuleService(IInvestmentRepository repository) : IStrategyRuleService
 {
+    private const string ExportFormat = "tradecopilot.strategy-rules";
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         Converters = { new JsonStringEnumConverter() }
@@ -17,6 +19,85 @@ public sealed class StrategyRuleService(IInvestmentRepository repository) : IStr
     {
         var rules = await repository.GetStrategyRulesAsync(cancellationToken);
         return rules.OrderBy(rule => rule.Priority).ThenBy(rule => rule.Name).Select(ToDto).ToList();
+    }
+
+    public async Task<StrategyRulesExportDto> ExportStrategyRulesAsync(CancellationToken cancellationToken = default)
+    {
+        var rules = await repository.GetStrategyRulesAsync(cancellationToken);
+        var portfolios = await repository.GetPortfoliosAsync(cancellationToken);
+        var assets = await repository.GetAssetsAsync(cancellationToken);
+        var portfolioById = portfolios.ToDictionary(portfolio => portfolio.Id);
+        var assetById = assets.ToDictionary(asset => asset.Id);
+
+        return new StrategyRulesExportDto(
+            ExportFormat,
+            1,
+            DateTimeOffset.UtcNow,
+            rules
+                .OrderBy(rule => rule.Priority)
+                .ThenBy(rule => rule.Name)
+                .Select(rule => ToPortableDto(rule, portfolioById, assetById))
+                .ToList());
+    }
+
+    public async Task<StrategyRuleImportResultDto> ImportStrategyRulesAsync(StrategyRulesExportDto importFile, CancellationToken cancellationToken = default)
+    {
+        if (!string.Equals(importFile.Format, ExportFormat, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("Le fichier ne correspond pas a un export de regles TradeCopilot.", nameof(importFile));
+        }
+
+        if (importFile.Version != 1)
+        {
+            throw new ArgumentException("La version du fichier de regles n'est pas supportee.", nameof(importFile));
+        }
+
+        var portfolios = await repository.GetPortfoliosAsync(cancellationToken);
+        var assets = await repository.GetAssetsAsync(cancellationToken);
+        var warnings = new List<StrategyRuleImportWarningDto>();
+        var importedRules = 0;
+
+        for (var index = 0; index < importFile.Rules.Count; index++)
+        {
+            var rowNumber = index + 1;
+            var importedRule = importFile.Rules[index];
+
+            try
+            {
+                var resolution = ResolveImportedRule(importedRule, portfolios, assets);
+                if (resolution.SkipMessage is not null)
+                {
+                    warnings.Add(new StrategyRuleImportWarningDto(rowNumber, importedRule.Name, "MissingReference", resolution.SkipMessage));
+                    continue;
+                }
+
+                var rule = new StrategyRule
+                {
+                    PortfolioId = resolution.PortfolioId,
+                    AssetId = resolution.AssetId,
+                    Name = NormalizeRequired(importedRule.Name),
+                    Description = NormalizeRequired(importedRule.Description),
+                    TriggerCondition = NormalizeOptional(importedRule.TriggerCondition),
+                    RecommendedAction = NormalizeRequired(importedRule.RecommendedAction),
+                    DefinitionJson = SerializeDefinition(ValidateDefinition(resolution.Definition)),
+                    Priority = importedRule.Priority,
+                    IsActive = importedRule.IsActive
+                };
+
+                await repository.AddStrategyRuleAsync(rule, cancellationToken);
+                importedRules++;
+            }
+            catch (ArgumentException exception)
+            {
+                warnings.Add(new StrategyRuleImportWarningDto(rowNumber, importedRule.Name, "InvalidRule", exception.Message));
+            }
+        }
+
+        return new StrategyRuleImportResultDto(
+            importFile.Rules.Count,
+            importedRules,
+            importFile.Rules.Count - importedRules,
+            warnings);
     }
 
     public async Task<StrategyRuleDto> CreateStrategyRuleAsync(CreateStrategyRuleRequest request, CancellationToken cancellationToken = default)
@@ -83,6 +164,170 @@ public sealed class StrategyRuleService(IInvestmentRepository repository) : IStr
         DeserializeDefinition(rule.DefinitionJson),
         rule.Priority,
         rule.IsActive);
+
+    private static PortableStrategyRuleDto ToPortableDto(
+        StrategyRule rule,
+        IReadOnlyDictionary<Guid, Portfolio> portfolioById,
+        IReadOnlyDictionary<Guid, Asset> assetById)
+    {
+        var definition = DeserializeDefinition(rule.DefinitionJson);
+        var portfolioId = definition?.Target.PortfolioId ?? rule.PortfolioId;
+        var assetId = definition?.Target.AssetId ?? rule.AssetId;
+        var portableDefinition = RebindDefinition(definition, null, null);
+
+        return new PortableStrategyRuleDto(
+            rule.Name,
+            rule.Description,
+            rule.TriggerCondition,
+            rule.RecommendedAction,
+            portableDefinition,
+            rule.Priority,
+            rule.IsActive,
+            portfolioId is not null && portfolioById.TryGetValue(portfolioId.Value, out var portfolio)
+                ? ToPortfolioReference(portfolio)
+                : null,
+            assetId is not null && assetById.TryGetValue(assetId.Value, out var asset)
+                ? ToAssetReference(asset)
+                : null);
+    }
+
+    private static PortablePortfolioReferenceDto ToPortfolioReference(Portfolio portfolio) => new(
+        portfolio.Name,
+        portfolio.Type switch
+        {
+            PortfolioType.Pea => PortfolioTypeReference.Pea,
+            PortfolioType.SecuritiesAccount => PortfolioTypeReference.SecuritiesAccount,
+            PortfolioType.Crypto => PortfolioTypeReference.Crypto,
+            _ => PortfolioTypeReference.Other
+        },
+        portfolio.Broker,
+        portfolio.BaseCurrency);
+
+    private static PortableAssetReferenceDto ToAssetReference(Asset asset) => new(
+        asset.Name,
+        asset.Symbol,
+        asset.Isin,
+        asset.MarketSymbol,
+        asset.Currency);
+
+    private static ImportedRuleResolution ResolveImportedRule(
+        PortableStrategyRuleDto importedRule,
+        IReadOnlyList<Portfolio> portfolios,
+        IReadOnlyList<Asset> assets)
+    {
+        var definition = importedRule.Definition;
+        Guid? portfolioId = null;
+        Guid? assetId = null;
+
+        if (RequiresPortfolioReference(definition) || importedRule.Portfolio is not null)
+        {
+            var portfolio = ResolvePortfolio(importedRule.Portfolio, portfolios);
+            if (portfolio is null)
+            {
+                return ImportedRuleResolution.Skipped($"Portefeuille introuvable pour la regle \"{importedRule.Name}\".");
+            }
+
+            portfolioId = portfolio.Id;
+        }
+
+        if (RequiresAssetReference(definition) || importedRule.Asset is not null)
+        {
+            var asset = ResolveAsset(importedRule.Asset, assets);
+            if (asset is null)
+            {
+                return ImportedRuleResolution.Skipped($"Actif introuvable pour la regle \"{importedRule.Name}\".");
+            }
+
+            assetId = asset.Id;
+        }
+
+        definition = RebindDefinition(definition, portfolioId, assetId);
+
+        return new ImportedRuleResolution(portfolioId, assetId, definition, null);
+    }
+
+    private static bool RequiresPortfolioReference(RuleDefinitionDto? definition) =>
+        definition?.Target.Mode == RuleTargetMode.PortfolioAssets
+        || definition?.Target is { Mode: RuleTargetMode.Specific, Type: RuleTargetType.Portfolio };
+
+    private static bool RequiresAssetReference(RuleDefinitionDto? definition) =>
+        definition?.Target is
+        {
+            Mode: RuleTargetMode.Specific,
+            Type: RuleTargetType.Asset or RuleTargetType.Position
+        };
+
+    private static RuleDefinitionDto? RebindDefinition(RuleDefinitionDto? definition, Guid? portfolioId, Guid? assetId)
+    {
+        if (definition is null)
+        {
+            return null;
+        }
+
+        var target = definition.Target;
+        var reboundTarget = target.Mode switch
+        {
+            RuleTargetMode.PortfolioAssets => target with { PortfolioId = portfolioId, AssetId = null },
+            RuleTargetMode.Specific when target.Type == RuleTargetType.Portfolio => target with { PortfolioId = portfolioId, AssetId = null },
+            RuleTargetMode.Specific when target.Type is RuleTargetType.Asset or RuleTargetType.Position => target with { PortfolioId = null, AssetId = assetId },
+            _ => target with { PortfolioId = null, AssetId = null }
+        };
+
+        return definition with { Target = reboundTarget };
+    }
+
+    private static Portfolio? ResolvePortfolio(PortablePortfolioReferenceDto? reference, IReadOnlyList<Portfolio> portfolios)
+    {
+        if (reference is null)
+        {
+            return null;
+        }
+
+        var name = NormalizeLookup(reference.Name);
+        var broker = NormalizeLookup(reference.Broker);
+        var currency = NormalizeLookup(reference.BaseCurrency);
+
+        return portfolios.FirstOrDefault(portfolio =>
+                NormalizeLookup(portfolio.Name) == name
+                && NormalizeLookup(portfolio.Broker) == broker
+                && NormalizeLookup(portfolio.BaseCurrency) == currency)
+            ?? portfolios.FirstOrDefault(portfolio => NormalizeLookup(portfolio.Name) == name);
+    }
+
+    private static Asset? ResolveAsset(PortableAssetReferenceDto? reference, IReadOnlyList<Asset> assets)
+    {
+        if (reference is null)
+        {
+            return null;
+        }
+
+        var isin = NormalizeLookup(reference.Isin);
+        if (!string.IsNullOrWhiteSpace(isin))
+        {
+            var assetByIsin = assets.FirstOrDefault(asset => NormalizeLookup(asset.Isin) == isin);
+            if (assetByIsin is not null)
+            {
+                return assetByIsin;
+            }
+        }
+
+        var marketSymbol = NormalizeLookup(reference.MarketSymbol);
+        if (!string.IsNullOrWhiteSpace(marketSymbol))
+        {
+            var assetByMarketSymbol = assets.FirstOrDefault(asset => NormalizeLookup(asset.MarketSymbol) == marketSymbol);
+            if (assetByMarketSymbol is not null)
+            {
+                return assetByMarketSymbol;
+            }
+        }
+
+        var symbol = NormalizeLookup(reference.Symbol);
+        var currency = NormalizeLookup(reference.Currency);
+        return assets.FirstOrDefault(asset => NormalizeLookup(asset.Symbol) == symbol && NormalizeLookup(asset.Currency) == currency)
+            ?? assets.FirstOrDefault(asset => NormalizeLookup(asset.Name) == NormalizeLookup(reference.Name));
+    }
+
+    private static string NormalizeLookup(string? value) => string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim().ToUpperInvariant();
 
     private static string NormalizeRequired(string value)
     {
@@ -156,4 +401,13 @@ public sealed class StrategyRuleService(IInvestmentRepository repository) : IStr
         string.IsNullOrWhiteSpace(definitionJson)
             ? null
             : JsonSerializer.Deserialize<RuleDefinitionDto>(definitionJson, JsonOptions);
+
+    private sealed record ImportedRuleResolution(
+        Guid? PortfolioId,
+        Guid? AssetId,
+        RuleDefinitionDto? Definition,
+        string? SkipMessage)
+    {
+        public static ImportedRuleResolution Skipped(string message) => new(null, null, null, message);
+    }
 }
