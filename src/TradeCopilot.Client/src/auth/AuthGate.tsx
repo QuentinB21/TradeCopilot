@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { useAuth } from "./AuthProvider";
 
+const appIconUrl = `${import.meta.env.BASE_URL}icons/app-icon-white.png`;
+
 export function AuthGate({ children }: { children: ReactNode }) {
   const auth = useAuth();
 
@@ -25,7 +27,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
       <main className="authShell">
         <section className="authPanel">
           <div className="brandMark authBrandMark" aria-hidden="true">
-            <img src="/icons/app-icon-white.png" alt="" />
+            <img src={appIconUrl} alt="" />
           </div>
           <strong>TradeCopilot</strong>
           <span>Acces securise a vos donnees patrimoniales.</span>

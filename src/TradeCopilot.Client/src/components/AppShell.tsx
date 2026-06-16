@@ -16,13 +16,15 @@ type AppShellProps<TKey extends string> = {
   onSignOut?: () => void;
 };
 
+const appIconUrl = `${import.meta.env.BASE_URL}icons/app-icon-white.png`;
+
 export function AppShell<TKey extends string>({ activeView, navigation, children, userName, onNavigate, onSignOut }: AppShellProps<TKey>) {
   return (
     <main className="app">
       <aside className="sidebar">
         <div className="brand">
           <div className="brandMark" aria-hidden="true">
-            <img src="/icons/app-icon-white.png" alt="" />
+            <img src={appIconUrl} alt="" />
           </div>
           <div>
             <strong>TradeCopilot</strong>

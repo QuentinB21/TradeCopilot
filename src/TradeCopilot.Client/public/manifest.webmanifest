@@ -2,19 +2,19 @@
   "name": "TradeCopilot",
   "short_name": "TradeCopilot",
   "description": "Copilote patrimonial personnel.",
-  "start_url": "/",
+  "start_url": ".",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#0a0a0a",
   "icons": [
     {
-      "src": "/icons/app-icon-black.png",
+      "src": "icons/app-icon-black.png",
       "sizes": "1024x1024",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/app-icon-white.png",
+      "src": "icons/app-icon-white.png",
       "sizes": "1024x1024",
       "type": "image/png",
       "purpose": "maskable"
