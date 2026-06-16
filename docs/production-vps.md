@@ -122,7 +122,7 @@ Le workflow `.github/workflows/deploy-production.yml` :
 2. compile le client avec la base `/projets/TradeCopilot/`
 3. se connecte au VPS en SSH
 4. cree le reseau `public-proxy` s'il manque
-5. pull `main`
+5. pull `master`
 6. relance `docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build --remove-orphans`
 
 Secrets GitHub attendus dans l'environnement `production` :
