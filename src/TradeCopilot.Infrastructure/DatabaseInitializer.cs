@@ -53,7 +53,6 @@ public sealed class DatabaseInitializer(IServiceProvider serviceProvider) : IHos
         {
             await dbContext.Database.ExecuteSqlRawAsync(
                 OwnerColumnSql(table),
-                [ExistingDataFallbackOwnerUserId],
                 cancellationToken);
         }
 
@@ -97,12 +96,12 @@ public sealed class DatabaseInitializer(IServiceProvider serviceProvider) : IHos
 
     private static string OwnerColumnSql(string table) => table switch
     {
-        "Portfolios" => """ALTER TABLE "Portfolios" ADD COLUMN IF NOT EXISTS "OwnerUserId" character varying(128) NOT NULL DEFAULT {0};""",
-        "Assets" => """ALTER TABLE "Assets" ADD COLUMN IF NOT EXISTS "OwnerUserId" character varying(128) NOT NULL DEFAULT {0};""",
-        "Transactions" => """ALTER TABLE "Transactions" ADD COLUMN IF NOT EXISTS "OwnerUserId" character varying(128) NOT NULL DEFAULT {0};""",
-        "AssetPrices" => """ALTER TABLE "AssetPrices" ADD COLUMN IF NOT EXISTS "OwnerUserId" character varying(128) NOT NULL DEFAULT {0};""",
-        "Repartitions" => """ALTER TABLE "Repartitions" ADD COLUMN IF NOT EXISTS "OwnerUserId" character varying(128) NOT NULL DEFAULT {0};""",
-        "StrategyRules" => """ALTER TABLE "StrategyRules" ADD COLUMN IF NOT EXISTS "OwnerUserId" character varying(128) NOT NULL DEFAULT {0};""",
+        "Portfolios" => $"""ALTER TABLE "Portfolios" ADD COLUMN IF NOT EXISTS "OwnerUserId" character varying(128) NOT NULL DEFAULT '{ExistingDataFallbackOwnerUserId}';""",
+        "Assets" => $"""ALTER TABLE "Assets" ADD COLUMN IF NOT EXISTS "OwnerUserId" character varying(128) NOT NULL DEFAULT '{ExistingDataFallbackOwnerUserId}';""",
+        "Transactions" => $"""ALTER TABLE "Transactions" ADD COLUMN IF NOT EXISTS "OwnerUserId" character varying(128) NOT NULL DEFAULT '{ExistingDataFallbackOwnerUserId}';""",
+        "AssetPrices" => $"""ALTER TABLE "AssetPrices" ADD COLUMN IF NOT EXISTS "OwnerUserId" character varying(128) NOT NULL DEFAULT '{ExistingDataFallbackOwnerUserId}';""",
+        "Repartitions" => $"""ALTER TABLE "Repartitions" ADD COLUMN IF NOT EXISTS "OwnerUserId" character varying(128) NOT NULL DEFAULT '{ExistingDataFallbackOwnerUserId}';""",
+        "StrategyRules" => $"""ALTER TABLE "StrategyRules" ADD COLUMN IF NOT EXISTS "OwnerUserId" character varying(128) NOT NULL DEFAULT '{ExistingDataFallbackOwnerUserId}';""",
         _ => throw new InvalidOperationException($"Unknown table {table}.")
     };
 }
