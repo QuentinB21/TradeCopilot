@@ -1,0 +1,75 @@
+name: Deploy Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Test API and domain
+        run: dotnet test TradeCopilot.slnx
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/TradeCopilot.Client/package-lock.json
+
+      - name: Install client dependencies
+        working-directory: src/TradeCopilot.Client
+        run: npm ci
+
+      - name: Build client
+        working-directory: src/TradeCopilot.Client
+        env:
+          VITE_APP_BASE_PATH: /projets/TradeCopilot/
+          VITE_API_BASE_URL: /projets/TradeCopilot
+          VITE_AUTH_AUTHORITY: https://quentin-bouchot.fr/projets/TradeCopilot/auth/realms/tradecopilot
+          VITE_AUTH_CLIENT_ID: tradecopilot-client
+          VITE_AUTH_SCOPE: openid profile email
+        run: npm run build
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: validate
+    environment: production
+
+    steps:
+      - name: Start SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Trust remote host
+        run: ssh-keyscan -p "${{ secrets.SSH_PORT }}" -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy on server
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "
+            set -e
+            docker network inspect public-proxy >/dev/null 2>&1 || docker network create public-proxy
+            cd '$DEPLOY_PATH'
+            git fetch --all
+            git checkout main
+            git pull --ff-only origin main
+            docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build --remove-orphans
+          "

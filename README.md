@@ -133,6 +133,28 @@ docker compose down -v
 docker compose up -d
 ```
 
+## Deploiement production sous le portfolio
+
+Le deploiement VPS cible expose TradeCopilot sous le domaine du portfolio :
+
+```text
+https://quentin-bouchot.fr/projets/TradeCopilot/
+```
+
+Le repo TradeCopilot reste autonome : son compose de production est `docker-compose.prod.yml`, ses secrets sont dans `.env.prod`, et le Caddy du repo portfolio route seulement les chemins publics vers les conteneurs `tradecopilot-client`, `tradecopilot-api` et `tradecopilot-keycloak`.
+
+Documentation complete : [`docs/production-vps.md`](docs/production-vps.md).
+
+Commandes principales sur le VPS :
+
+```bash
+cp .env.prod.example .env.prod
+docker network inspect public-proxy >/dev/null 2>&1 || docker network create public-proxy
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+```
+
+Le CI/CD GitHub Actions est defini dans `.github/workflows/deploy-production.yml`.
+
 ## Authentification Keycloak
 
 En Docker Compose, l'application est protegee par Keycloak. Le realm `tradecopilot` et le client public `tradecopilot-client` sont importes depuis `infra/keycloak/tradecopilot-realm.json`.
@@ -145,20 +167,22 @@ Apres le premier demarrage :
 4. Cree au moins un utilisateur applicatif, definis son mot de passe dans `Credentials`, puis desactive `Temporary` si necessaire.
 5. Reviens sur `http://localhost` et connecte-toi avec cet utilisateur.
 
-Pour un VPS, copie `.env.example` vers `.env`, remplace les mots de passe et remplace les URLs `localhost` par le domaine HTTPS public. Exemple :
+Pour le VPS, utilise plutot `.env.prod.example` vers `.env.prod`. Les valeurs importantes sont :
 
 ```env
-KEYCLOAK_HOSTNAME=https://tradecopilot.example.com/auth
-AUTH_AUTHORITY=https://tradecopilot.example.com/auth/realms/tradecopilot
+KEYCLOAK_HOSTNAME=https://quentin-bouchot.fr/projets/TradeCopilot/auth
+AUTH_AUTHORITY=https://quentin-bouchot.fr/projets/TradeCopilot/auth/realms/tradecopilot
 AUTH_METADATA_ADDRESS=http://keycloak:8080/auth/realms/tradecopilot/.well-known/openid-configuration
 AUTH_BACKCHANNEL_AUTHORITY=http://keycloak:8080/auth/realms/tradecopilot
-VITE_AUTH_AUTHORITY=https://tradecopilot.example.com/auth/realms/tradecopilot
+VITE_AUTH_AUTHORITY=https://quentin-bouchot.fr/projets/TradeCopilot/auth/realms/tradecopilot
+VITE_API_BASE_URL=/projets/TradeCopilot
+VITE_APP_BASE_PATH=/projets/TradeCopilot/
 ```
 
 Dans Keycloak, mets aussi a jour le client `tradecopilot-client` :
 
-- `Valid redirect URIs` : `https://ton-domaine/auth/callback`
-- `Valid post logout redirect URIs` : `https://ton-domaine`
+- `Valid redirect URIs` : `https://ton-domaine/projets/TradeCopilot/auth/callback`
+- `Valid post logout redirect URIs` : `https://ton-domaine/projets/TradeCopilot/`
 - `Web origins` : `https://ton-domaine`
 
 Le client React lit l'URL Keycloak au build Vite. Apres modification de `.env`, il faut donc reconstruire le client :

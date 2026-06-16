@@ -1,6 +1,6 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { UserManager, WebStorageStateStore, type User } from "oidc-client-ts";
-import { authConfig, authPostLogoutRedirectUri, authRedirectUri, isAuthEnabled } from "./authConfig";
+import { authConfig, authHomePath, authPostLogoutRedirectUri, authRedirectUri, isAuthCallbackPath, isAuthEnabled } from "./authConfig";
 import { setAccessTokenProvider } from "./tokenStore";
 
 type AuthContextValue = {
@@ -33,9 +33,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setLoading] = useState(isAuthEnabled && window.location.pathname === "/auth/callback");
+  const [isLoading, setLoading] = useState(isAuthEnabled && isAuthCallbackPath());
   const [loadingReason, setLoadingReason] = useState<AuthContextValue["loadingReason"]>(
-    isAuthEnabled && window.location.pathname === "/auth/callback" ? "callback" : null
+    isAuthEnabled && isAuthCallbackPath() ? "callback" : null
   );
   const [error, setError] = useState<string | null>(null);
 
@@ -77,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     async function initialize() {
       try {
-        if (window.location.pathname === "/auth/callback") {
+        if (isAuthCallbackPath()) {
           setLoading(true);
           setLoadingReason("callback");
           try {
@@ -91,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               throw callbackException;
             }
           } finally {
-            window.history.replaceState({}, document.title, "/");
+            window.history.replaceState({}, document.title, authHomePath());
           }
 
           return;

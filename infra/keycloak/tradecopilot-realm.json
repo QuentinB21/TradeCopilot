@@ -28,16 +28,18 @@
       "redirectUris": [
         "http://localhost/auth/callback",
         "http://localhost:5173/auth/callback",
-        "https://tradecopilot.example.com/auth/callback"
+        "https://tradecopilot.example.com/auth/callback",
+        "https://quentin-bouchot.fr/projets/TradeCopilot/auth/callback"
       ],
       "webOrigins": [
         "http://localhost",
         "http://localhost:5173",
-        "https://tradecopilot.example.com"
+        "https://tradecopilot.example.com",
+        "https://quentin-bouchot.fr"
       ],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "http://localhost##http://localhost:5173##https://tradecopilot.example.com"
+        "post.logout.redirect.uris": "http://localhost##http://localhost:5173##https://tradecopilot.example.com##https://quentin-bouchot.fr/projets/TradeCopilot/"
       },
       "protocolMappers": [
         {

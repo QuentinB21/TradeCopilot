@@ -28,6 +28,8 @@ services:
         VITE_AUTH_AUTHORITY: ${VITE_AUTH_AUTHORITY:-http://localhost/auth/realms/tradecopilot}
         VITE_AUTH_CLIENT_ID: ${VITE_AUTH_CLIENT_ID:-tradecopilot-client}
         VITE_AUTH_SCOPE: ${VITE_AUTH_SCOPE:-openid profile email}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
+        VITE_APP_BASE_PATH: ${VITE_APP_BASE_PATH:-/}
     container_name: tradecopilot-client
     networks:
       - tradecopilot
