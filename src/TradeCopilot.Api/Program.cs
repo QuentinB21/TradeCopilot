@@ -13,6 +13,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("local-client");
 app.UseAuthentication();
+app.UseTradeCopilotGuestAccess();
 app.UseAuthorization();
 app.MapGet("/health", () => Results.Text("ok")).AllowAnonymous();
 app.MapControllers();

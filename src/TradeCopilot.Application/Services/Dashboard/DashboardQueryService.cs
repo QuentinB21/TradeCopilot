@@ -7,6 +7,7 @@ namespace TradeCopilot.Application.Services.Dashboard;
 
 public sealed class DashboardQueryService(
     IInvestmentRepository repository,
+    ICurrentUserContext currentUser,
     DashboardService dashboardService,
     IMarketPriceRefreshService marketPriceRefreshService,
     PositionCalculator positionCalculator,
@@ -20,7 +21,9 @@ public sealed class DashboardQueryService(
         var prices = await repository.GetPricesAsync(cancellationToken);
         var repartitions = await repository.GetAssetRepartitionsAsync(cancellationToken);
         var rules = await repository.GetStrategyRulesAsync(cancellationToken);
-        var refreshedPrices = await marketPriceRefreshService.RefreshCurrentPricesAsync(assets, transactions, prices, cancellationToken);
+        var refreshedPrices = currentUser.IsGuest
+            ? prices
+            : await marketPriceRefreshService.RefreshCurrentPricesAsync(assets, transactions, prices, cancellationToken);
         var positions = positionCalculator.Calculate(portfolios, assets, transactions, refreshedPrices, repartitions);
         var ruleSnapshot = ruleEvaluationService.Evaluate(rules, portfolios, assets, positions, refreshedPrices);
 

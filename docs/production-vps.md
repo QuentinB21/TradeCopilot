@@ -127,6 +127,17 @@ L'inscription publique est viable uniquement parce que l'API isole maintenant le
 
 Sur un VPS neuf, aucune action de migration manuelle n'est necessaire : les tables sont creees directement avec `OwnerUserId`, puis chaque nouvelle donnee est rattachee au compte Keycloak connecte.
 
+## Mode invite
+
+Le client propose `Explorer en mode invite` pour presenter TradeCopilot sans compte Keycloak. Ce mode utilise l'owner technique `guest-demo`, seede automatiquement au demarrage avec des donnees de demonstration.
+
+La protection est faite cote API :
+
+- seules les requetes de lecture avec `X-TradeCopilot-Guest: true` sont acceptees ;
+- les methodes d'ecriture en mode invite retournent `403 Forbidden` ;
+- le repository refuse aussi les ecritures si l'identite courante est invitee ;
+- le dashboard invite ne declenche pas de rafraichissement de prix pour conserver le dataset intact.
+
 ## CI/CD GitHub Actions
 
 Le workflow `.github/workflows/deploy-production.yml` :
@@ -163,6 +174,8 @@ Depuis un navigateur :
 3. `https://quentin-bouchot.fr/projets/TradeCopilot/api/dashboard` doit repondre `401` si non connecte.
 4. `https://quentin-bouchot.fr/projets/TradeCopilot/auth/realms/tradecopilot/.well-known/openid-configuration` doit repondre le document OIDC.
 5. Une connexion Keycloak doit revenir vers `/projets/TradeCopilot/auth/callback`, puis l'URL doit etre nettoyee vers `/projets/TradeCopilot/`.
+6. Le bouton `Explorer en mode invite` doit ouvrir le dashboard avec les donnees de demonstration.
+7. En mode invite, une tentative de creation doit etre refusee avec `403 Forbidden` cote API.
 
 ## Points de vigilance
 

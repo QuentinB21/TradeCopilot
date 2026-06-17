@@ -1,19 +1,22 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { UserManager, WebStorageStateStore, type User } from "oidc-client-ts";
 import { authConfig, authHomePath, authPostLogoutRedirectUri, authRedirectUri, isAuthCallbackPath, isAuthEnabled } from "./authConfig";
-import { setAccessTokenProvider } from "./tokenStore";
+import { setAccessTokenProvider, setGuestModeProvider } from "./tokenStore";
 
 type AuthContextValue = {
   isAuthenticated: boolean;
   isLoading: boolean;
   loadingReason: "callback" | "startup" | null;
+  isGuest: boolean;
   user: User | null;
   error: string | null;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
+  enterGuestMode: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+const GuestSessionKey = "tradecopilot.guest";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const manager = useMemo(() => {
@@ -37,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loadingReason, setLoadingReason] = useState<AuthContextValue["loadingReason"]>(
     isAuthEnabled && isAuthCallbackPath() ? "callback" : null
   );
+  const [isGuest, setIsGuest] = useState(() => window.sessionStorage.getItem(GuestSessionKey) === "true" && !isAuthCallbackPath());
   const [error, setError] = useState<string | null>(null);
 
   const readValidUser = useCallback(async () => {
@@ -55,13 +59,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!manager) {
       setAccessTokenProvider(null);
+      setGuestModeProvider(() => isGuest);
       setLoading(false);
       setLoadingReason(null);
-      return;
+    } else {
+      setGuestModeProvider(() => isGuest);
     }
+
+    if (!manager) {
+      return () => {
+        setGuestModeProvider(null);
+      };
+    }
+
     const authManager = manager;
 
     setAccessTokenProvider(async () => {
+      if (isGuest) {
+        return null;
+      }
+
       const validUser = await readValidUser();
       return validUser?.access_token ?? null;
     });
@@ -78,6 +95,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async function initialize() {
       try {
         if (isAuthCallbackPath()) {
+          setIsGuest(false);
+          window.sessionStorage.removeItem(GuestSessionKey);
           setLoading(true);
           setLoadingReason("callback");
           try {
@@ -98,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         setLoadingReason("startup");
-        setUser(await readValidUser());
+        setUser(isGuest ? null : await readValidUser());
       } catch (exception) {
         setError(exception instanceof Error ? exception.message : "Authentification impossible.");
       } finally {
@@ -114,10 +133,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       authManager.events.removeUserUnloaded(handleUserUnloaded);
       window.removeEventListener("tradecopilot:unauthorized", handleUnauthorized);
       setAccessTokenProvider(null);
+      setGuestModeProvider(null);
     };
-  }, [manager, readValidUser]);
+  }, [isGuest, manager, readValidUser]);
 
   const signIn = useCallback(async () => {
+    setIsGuest(false);
+    window.sessionStorage.removeItem(GuestSessionKey);
     if (manager) {
       setError(null);
       await manager.signinRedirect();
@@ -125,22 +147,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [manager]);
 
   const signOut = useCallback(async () => {
+    if (isGuest) {
+      setIsGuest(false);
+      window.sessionStorage.removeItem(GuestSessionKey);
+      setUser(null);
+      return;
+    }
+
     if (manager) {
       setError(null);
       setUser(null);
       await manager.signoutRedirect();
     }
-  }, [manager]);
+  }, [isGuest, manager]);
+
+  const enterGuestMode = useCallback(() => {
+    setError(null);
+    setUser(null);
+    setIsGuest(true);
+    window.sessionStorage.setItem(GuestSessionKey, "true");
+  }, []);
 
   const value = useMemo<AuthContextValue>(() => ({
-    isAuthenticated: !isAuthEnabled || Boolean(user && !user.expired),
+    isAuthenticated: isGuest || !isAuthEnabled || Boolean(user && !user.expired),
     isLoading,
     loadingReason,
+    isGuest,
     user,
     error,
     signIn,
-    signOut
-  }), [error, isLoading, loadingReason, signIn, signOut, user]);
+    signOut,
+    enterGuestMode
+  }), [enterGuestMode, error, isGuest, isLoading, loadingReason, signIn, signOut, user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

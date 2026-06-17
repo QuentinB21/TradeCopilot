@@ -233,6 +233,17 @@ th,
   line-height: 1.4;
 }
 
+.readOnlyBadge {
+  justify-self: start;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .sidebarAccount button {
   width: 100%;
   min-height: 38px;
@@ -292,6 +303,18 @@ th,
   font-weight: 650;
 }
 
+.authPanel .secondaryButton {
+  border-color: var(--line-strong);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.authHint {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .authBrandMark {
   width: 46px;
   height: 46px;
@@ -309,6 +332,17 @@ th,
   align-content: start;
   gap: 18px;
   padding: 32px clamp(18px, 3vw, 42px) 42px;
+}
+
+.readOnlyNotice {
+  border: 1px solid var(--warning);
+  border-radius: 8px;
+  background: var(--warning-soft);
+  color: var(--ink);
+  padding: 12px 14px;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.45;
 }
 
 .topbar {

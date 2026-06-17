@@ -1,6 +1,21 @@
-import { notifyUnauthorized, readAccessToken } from "../auth/tokenStore";
+import { notifyUnauthorized, readAccessToken, readIsGuestMode } from "../auth/tokenStore";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+const GuestHeaderName = "X-TradeCopilot-Guest";
+
+function guestHeaders(token: string | null): Record<string, string> {
+  return !token && readIsGuestMode() ? { [GuestHeaderName]: "true" } : {};
+}
+
+function isGuestSafePost(path: string) {
+  return path === "/api/monthly-plan";
+}
+
+function assertWritable(path: string) {
+  if (readIsGuestMode() && !isGuestSafePost(path)) {
+    throw new Error("Le mode invite est disponible en lecture seule.");
+  }
+}
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const token = await readAccessToken();
@@ -9,6 +24,7 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...guestHeaders(token),
       ...init?.headers
     }
   });
@@ -34,6 +50,7 @@ export function getJson<T>(path: string) {
 }
 
 export function postJson<T>(path: string, body: unknown) {
+  assertWritable(path);
   return requestJson<T>(path, {
     method: "POST",
     body: JSON.stringify(body)
@@ -41,6 +58,7 @@ export function postJson<T>(path: string, body: unknown) {
 }
 
 export async function postForm<T>(path: string, body: FormData): Promise<T> {
+  assertWritable(path);
   const token = await readAccessToken();
   const response = await fetch(`${API_BASE}${path}`, {
     method: "POST",
@@ -63,6 +81,7 @@ export async function postForm<T>(path: string, body: FormData): Promise<T> {
 }
 
 export function putJson<T>(path: string, body: unknown) {
+  assertWritable(path);
   return requestJson<T>(path, {
     method: "PUT",
     body: JSON.stringify(body)
@@ -70,5 +89,6 @@ export function putJson<T>(path: string, body: unknown) {
 }
 
 export function deleteJson(path: string) {
+  assertWritable(path);
   return requestJson<void>(path, { method: "DELETE" });
 }

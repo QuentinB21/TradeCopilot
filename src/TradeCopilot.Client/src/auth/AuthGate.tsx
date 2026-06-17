@@ -33,6 +33,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
           <span>Acces securise a vos donnees patrimoniales.</span>
           {auth.error ? <p className="stateError">{auth.error}</p> : null}
           <button type="button" onClick={() => void auth.signIn()}>Se connecter</button>
+          <button className="secondaryButton" type="button" onClick={auth.enterGuestMode}>Explorer en mode invite</button>
+          <small className="authHint">Jeu de donnees de demonstration en lecture seule.</small>
         </section>
       </main>
     );

@@ -12,13 +12,14 @@ type AppShellProps<TKey extends string> = {
   navigation: NavigationItem<TKey>[];
   children: ReactNode;
   userName?: string | null;
+  isReadOnly?: boolean;
   onNavigate: (view: TKey) => void;
   onSignOut?: () => void;
 };
 
 const appIconUrl = `${import.meta.env.BASE_URL}icons/app-icon-white.png`;
 
-export function AppShell<TKey extends string>({ activeView, navigation, children, userName, onNavigate, onSignOut }: AppShellProps<TKey>) {
+export function AppShell<TKey extends string>({ activeView, navigation, children, userName, isReadOnly, onNavigate, onSignOut }: AppShellProps<TKey>) {
   return (
     <main className="app">
       <aside className="sidebar">
@@ -54,11 +55,19 @@ export function AppShell<TKey extends string>({ activeView, navigation, children
         {onSignOut ? (
           <section className="sidebarAccount" aria-label="Compte utilisateur">
             <span>{userName ?? "Session active"}</span>
+            {isReadOnly ? <small className="readOnlyBadge">Lecture seule</small> : null}
             <button className="secondaryButton" type="button" onClick={onSignOut}>Deconnexion</button>
           </section>
         ) : null}
       </aside>
-      <section className="workspace">{children}</section>
+      <section className="workspace">
+        {isReadOnly ? (
+          <div className="readOnlyNotice" role="status">
+            Mode invite : vous explorez un jeu de donnees de demonstration. Les modifications sont desactivees.
+          </div>
+        ) : null}
+        {children}
+      </section>
     </main>
   );
 }

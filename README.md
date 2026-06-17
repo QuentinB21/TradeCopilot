@@ -122,7 +122,7 @@ Le serveur Vite proxifie `/api` vers `http://localhost:5088`.
 docker compose up -d postgres
 ```
 
-La chaine de connexion par defaut est configuree dans `src/TradeCopilot.Api/appsettings.Development.json`. Au demarrage, l'API cree le schema avec EF Core si necessaire. Aucune donnee de demo n'est inseree en environnement applicatif.
+La chaine de connexion par defaut est configuree dans `src/TradeCopilot.Api/appsettings.Development.json`. Au demarrage, l'API cree le schema avec EF Core si necessaire. Les espaces utilisateurs reels restent vides ; seul l'espace technique `guest-demo` est alimente avec un jeu de donnees public en lecture seule.
 
 pgAdmin est inclus dans la stack Docker de developpement. Ouvre `http://localhost:5050`, puis developpe le serveur `TradeCopilot PostgreSQL` deja enregistre pour consulter `Databases > tradecopilot > Schemas > public > Tables`. La configuration pgAdmin utilise le mot de passe PostgreSQL local du Compose uniquement pour eviter une saisie manuelle en environnement de developpement.
 
@@ -160,6 +160,8 @@ Le CI/CD GitHub Actions est defini dans `.github/workflows/deploy-production.yml
 En Docker Compose, l'application est protegee par Keycloak. Le realm `tradecopilot` et le client public `tradecopilot-client` sont importes depuis `infra/keycloak/tradecopilot-realm.json`.
 
 Le realm autorise l'inscription publique. Cote API, les donnees metier sont isolees par utilisateur via le claim Keycloak `sub` stocke dans `OwnerUserId`, afin qu'un utilisateur inscrit ne puisse ni lire ni modifier les portefeuilles, actifs, transactions, prix, repartitions ou regles d'un autre.
+
+L'ecran d'acces propose aussi un mode invite sans authentification. Il utilise l'owner technique `guest-demo`, seede automatiquement avec un portefeuille de demonstration. Les requetes invitees portent `X-TradeCopilot-Guest: true` ; l'API autorise uniquement les methodes de lecture et renvoie `403 Forbidden` sur toute tentative d'ecriture. Le repository applique aussi cette protection pour eviter une ecriture accidentelle depuis un futur endpoint.
 
 Apres le premier demarrage :
 

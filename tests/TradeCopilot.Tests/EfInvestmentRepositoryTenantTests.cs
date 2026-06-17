@@ -80,6 +80,21 @@ public sealed class EfInvestmentRepositoryTenantTests
         }
     }
 
+    [Fact]
+    public async Task Repository_rejects_guest_writes()
+    {
+        await using var dbContext = CreateDbContext(Guid.NewGuid().ToString("N"));
+        var repository = new EfInvestmentRepository(dbContext, new TestCurrentUserContext("guest-demo", isGuest: true));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => repository.AddPortfolioAsync(new Portfolio
+        {
+            Name = "PEA invite",
+            Broker = "Broker",
+            BaseCurrency = "EUR",
+            Type = PortfolioType.Pea
+        }));
+    }
+
     private static TradeCopilotDbContext CreateDbContext(string databaseName)
     {
         var options = new DbContextOptionsBuilder<TradeCopilotDbContext>()
@@ -89,8 +104,9 @@ public sealed class EfInvestmentRepositoryTenantTests
         return new TradeCopilotDbContext(options);
     }
 
-    private sealed class TestCurrentUserContext(string userId) : ICurrentUserContext
+    private sealed class TestCurrentUserContext(string userId, bool isGuest = false) : ICurrentUserContext
     {
         public string UserId { get; } = userId;
+        public bool IsGuest { get; } = isGuest;
     }
 }

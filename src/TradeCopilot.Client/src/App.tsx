@@ -26,15 +26,18 @@ const navigation: NavigationItem<ViewKey>[] = [
 export function App() {
   const [activeView, setActiveView] = useState<ViewKey>("dashboard");
   const auth = useAuth();
-  const userName = auth.user?.profile.name ?? auth.user?.profile.preferred_username ?? auth.user?.profile.email ?? null;
+  const userName = auth.isGuest
+    ? "Mode invite"
+    : auth.user?.profile.name ?? auth.user?.profile.preferred_username ?? auth.user?.profile.email ?? null;
 
   return (
     <AppShell
       activeView={activeView}
       navigation={navigation}
       userName={userName}
+      isReadOnly={auth.isGuest}
       onNavigate={setActiveView}
-      onSignOut={auth.user ? () => void auth.signOut() : undefined}
+      onSignOut={auth.user || auth.isGuest ? () => void auth.signOut() : undefined}
     >
       <Suspense fallback={<section className="stateBlock">Chargement de la vue...</section>}>
         {activeView === "dashboard" ? <DashboardPage /> : null}

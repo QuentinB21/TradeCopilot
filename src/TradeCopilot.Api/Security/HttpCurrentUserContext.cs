@@ -7,6 +7,18 @@ public sealed class HttpCurrentUserContext(IHttpContextAccessor httpContextAcces
 {
     private const string LocalDevelopmentUserId = "local-development-user";
 
+    public bool IsGuest
+    {
+        get
+        {
+            var user = httpContextAccessor.HttpContext?.User;
+            return string.Equals(
+                user?.FindFirstValue(GuestAccessMiddleware.GuestClaimType),
+                GuestAccessMiddleware.GuestClaimValue,
+                StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
     public string UserId
     {
         get

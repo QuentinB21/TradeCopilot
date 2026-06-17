@@ -87,6 +87,7 @@ public sealed class EfInvestmentRepository(TradeCopilotDbContext dbContext, ICur
 
     public async Task AddPortfolioAsync(Portfolio portfolio, CancellationToken cancellationToken = default)
     {
+        EnsureWritable();
         portfolio.OwnerUserId = OwnerUserId;
         foreach (var repartition in portfolio.Repartitions)
         {
@@ -99,6 +100,7 @@ public sealed class EfInvestmentRepository(TradeCopilotDbContext dbContext, ICur
 
     public async Task UpdatePortfolioAsync(Portfolio portfolio, CancellationToken cancellationToken = default)
     {
+        EnsureWritable();
         portfolio.OwnerUserId = OwnerUserId;
         foreach (var repartition in portfolio.Repartitions)
         {
@@ -111,12 +113,14 @@ public sealed class EfInvestmentRepository(TradeCopilotDbContext dbContext, ICur
 
     public async Task DeletePortfolioAsync(Portfolio portfolio, CancellationToken cancellationToken = default)
     {
+        EnsureWritable();
         dbContext.Portfolios.Remove(portfolio);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     public async Task AddAssetAsync(Asset asset, CancellationToken cancellationToken = default)
     {
+        EnsureWritable();
         asset.OwnerUserId = OwnerUserId;
         dbContext.Assets.Add(asset);
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -124,6 +128,7 @@ public sealed class EfInvestmentRepository(TradeCopilotDbContext dbContext, ICur
 
     public async Task UpdateAssetAsync(Asset asset, CancellationToken cancellationToken = default)
     {
+        EnsureWritable();
         asset.OwnerUserId = OwnerUserId;
         dbContext.Assets.Update(asset);
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -131,12 +136,14 @@ public sealed class EfInvestmentRepository(TradeCopilotDbContext dbContext, ICur
 
     public async Task DeleteAssetAsync(Asset asset, CancellationToken cancellationToken = default)
     {
+        EnsureWritable();
         dbContext.Assets.Remove(asset);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     public async Task AddTransactionAsync(Transaction transaction, CancellationToken cancellationToken = default)
     {
+        EnsureWritable();
         await EnsureOwnedPortfolioAsync(transaction.PortfolioId, cancellationToken);
         await EnsureOwnedAssetAsync(transaction.AssetId, cancellationToken);
         transaction.OwnerUserId = OwnerUserId;
@@ -146,6 +153,7 @@ public sealed class EfInvestmentRepository(TradeCopilotDbContext dbContext, ICur
 
     public async Task AddTransactionsAsync(IReadOnlyCollection<Transaction> transactions, CancellationToken cancellationToken = default)
     {
+        EnsureWritable();
         foreach (var transaction in transactions)
         {
             await EnsureOwnedPortfolioAsync(transaction.PortfolioId, cancellationToken);
@@ -159,6 +167,7 @@ public sealed class EfInvestmentRepository(TradeCopilotDbContext dbContext, ICur
 
     public async Task UpdateTransactionAsync(Transaction transaction, CancellationToken cancellationToken = default)
     {
+        EnsureWritable();
         await EnsureOwnedPortfolioAsync(transaction.PortfolioId, cancellationToken);
         await EnsureOwnedAssetAsync(transaction.AssetId, cancellationToken);
         transaction.OwnerUserId = OwnerUserId;
@@ -168,12 +177,14 @@ public sealed class EfInvestmentRepository(TradeCopilotDbContext dbContext, ICur
 
     public async Task DeleteTransactionAsync(Transaction transaction, CancellationToken cancellationToken = default)
     {
+        EnsureWritable();
         dbContext.Transactions.Remove(transaction);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     public async Task AddPriceAsync(AssetPrice price, CancellationToken cancellationToken = default)
     {
+        EnsureWritable();
         await EnsureOwnedAssetAsync(price.AssetId, cancellationToken);
         price.OwnerUserId = OwnerUserId;
         dbContext.AssetPrices.Add(price);
@@ -182,6 +193,7 @@ public sealed class EfInvestmentRepository(TradeCopilotDbContext dbContext, ICur
 
     public async Task UpdatePriceAsync(AssetPrice price, CancellationToken cancellationToken = default)
     {
+        EnsureWritable();
         await EnsureOwnedAssetAsync(price.AssetId, cancellationToken);
         price.OwnerUserId = OwnerUserId;
         dbContext.AssetPrices.Update(price);
@@ -190,12 +202,14 @@ public sealed class EfInvestmentRepository(TradeCopilotDbContext dbContext, ICur
 
     public async Task DeletePriceAsync(AssetPrice price, CancellationToken cancellationToken = default)
     {
+        EnsureWritable();
         dbContext.AssetPrices.Remove(price);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     public async Task AddRepartitionAsync(Repartition repartition, CancellationToken cancellationToken = default)
     {
+        EnsureWritable();
         await EnsureOwnedPortfolioAsync(repartition.PortfolioId, cancellationToken);
         await EnsureOwnedAssetAsync(repartition.AssetId, cancellationToken);
         repartition.OwnerUserId = OwnerUserId;
@@ -205,6 +219,7 @@ public sealed class EfInvestmentRepository(TradeCopilotDbContext dbContext, ICur
 
     public async Task UpdateRepartitionAsync(Repartition repartition, CancellationToken cancellationToken = default)
     {
+        EnsureWritable();
         await EnsureOwnedPortfolioAsync(repartition.PortfolioId, cancellationToken);
         await EnsureOwnedAssetAsync(repartition.AssetId, cancellationToken);
         repartition.OwnerUserId = OwnerUserId;
@@ -214,12 +229,14 @@ public sealed class EfInvestmentRepository(TradeCopilotDbContext dbContext, ICur
 
     public async Task DeleteRepartitionAsync(Repartition repartition, CancellationToken cancellationToken = default)
     {
+        EnsureWritable();
         dbContext.Repartitions.Remove(repartition);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     public async Task AddStrategyRuleAsync(StrategyRule strategyRule, CancellationToken cancellationToken = default)
     {
+        EnsureWritable();
         await EnsureOwnedPortfolioAsync(strategyRule.PortfolioId, cancellationToken);
         await EnsureOwnedAssetAsync(strategyRule.AssetId, cancellationToken);
         strategyRule.OwnerUserId = OwnerUserId;
@@ -229,6 +246,7 @@ public sealed class EfInvestmentRepository(TradeCopilotDbContext dbContext, ICur
 
     public async Task UpdateStrategyRuleAsync(StrategyRule strategyRule, CancellationToken cancellationToken = default)
     {
+        EnsureWritable();
         await EnsureOwnedPortfolioAsync(strategyRule.PortfolioId, cancellationToken);
         await EnsureOwnedAssetAsync(strategyRule.AssetId, cancellationToken);
         strategyRule.OwnerUserId = OwnerUserId;
@@ -238,8 +256,17 @@ public sealed class EfInvestmentRepository(TradeCopilotDbContext dbContext, ICur
 
     public async Task DeleteStrategyRuleAsync(StrategyRule strategyRule, CancellationToken cancellationToken = default)
     {
+        EnsureWritable();
         dbContext.StrategyRules.Remove(strategyRule);
         await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private void EnsureWritable()
+    {
+        if (currentUser.IsGuest)
+        {
+            throw new InvalidOperationException("Le mode invite est disponible en lecture seule.");
+        }
     }
 
     private async Task EnsureOwnedPortfolioAsync(Guid portfolioId, CancellationToken cancellationToken)
