@@ -70,6 +70,6 @@ jobs:
             cd '$DEPLOY_PATH'
             git fetch --all
             git checkout master
-            git pull --ff-only origin master
+            git reset --hard origin/master
             docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build --remove-orphans
           "
